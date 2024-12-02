@@ -14,7 +14,4 @@ export class PujaBid {
 
   @Column('decimal', { precision: 10, scale: 2 })
   amount: number; // El monto de la puja
-  
-  @Column()
-  email_user: string;
 }

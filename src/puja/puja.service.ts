@@ -20,43 +20,100 @@ export class PujaService {
   ) {}
 
   async createPuja(createPujaDto: CreatePujaDto): Promise<Puja> {
-    const creator = await this.userRepository.findOne({ where: { email: createPujaDto.creatorId } });
+    const { creatorId, imagenes: imagenesUrls, ...pujaData } = createPujaDto;
+  
+    // Verificar que el creador existe
+    const creator = await this.userRepository.findOne({ where: { email: creatorId } });
     if (!creator) {
       throw new NotFoundException('Creador no encontrado.');
     }
+  
+    // Crear la instancia de la puja
+    const puja = this.pujaRepository.create({
+      ...pujaData,
+      creator, // Asociar el creador
+    });
+  
+    // Guardar la puja para obtener el ID
+    const savedPuja = await this.pujaRepository.save(puja);
+  
+    // Asociar las imágenes a la puja
+    const imagenes = imagenesUrls.map((url) => {
+      const imagen = new Image(); // Asegúrate de tener la entidad `Image`
+      imagen.url = url;
+      imagen.puja = savedPuja; // Establecer la relación
+      return imagen;
+    });
+  
+    // Guardar las imágenes
+    await this.imagenRepository.save(imagenes);
+  
+    return savedPuja;
+  }
+  
+  
 
-    // Transformar las imágenes de strings a objetos Imagen
-    const imagenes = await Promise.all(
-      createPujaDto.imagenes.map(async (url) => {
-        const imagen = new Image();
-        imagen.url = url;  // Asumir que la entidad Imagen tiene un campo `url`
-        return imagen;
+  async findAll(): Promise<any[]> {
+    const pujas = await this.pujaRepository.find({
+      relations: ['creator', 'imagenes'],
+    });
+  
+    // Agregar los bids a cada puja
+    const pujasWithBids = await Promise.all(
+      pujas.map(async (puja) => {
+        const bids = await this.getBidsByPuja(puja.id);
+        return { ...puja, bids };
       }),
     );
+  
+    return pujasWithBids;
+  }
+  
 
-    const puja = this.pujaRepository.create({
-      ...createPujaDto,
-      creator,  // Asocia el creador
-      imagenes,  // Asocia las imágenes transformadas
+  async findOne(id: number): Promise<any> {
+    const puja = await this.pujaRepository.findOne({
+      where: { id },
+      relations: ['creator', 'imagenes'],
     });
-
-    return this.pujaRepository.save(puja);
-  }
-
-  async findAll(): Promise<Puja[]> {
-    return this.pujaRepository.find({ relations: ['creator', 'imagenes','pujas'] });
-  }
-
-  async findOne(id: number): Promise<Puja> {
-    const puja = await this.pujaRepository.findOne({ where: { id }, relations: ['creator', 'imagenes','pujas'] });
+  
     if (!puja) {
       throw new NotFoundException('Puja no encontrada.');
     }
-    return puja;
+  
+    // Obtener los bids asociados
+    const bids = await this.getBidsByPuja(id);
+  
+    return { ...puja, bids };
+  }
+  
+  async getBidsByPuja(pujaId: number): Promise<PujaBid[]> {
+  const pujaBids = await this.pujaBidRepository.find({
+    where: { puja: { id: pujaId } },
+    relations: ['puja', 'user'], // Agregar relaciones necesarias
+  });
+
+  if (pujaBids.length === 0) {
+    throw new NotFoundException('No se encontraron bids para esta puja.');
   }
 
+  return pujaBids;
+  }
+
+  async getBidsByUser(userEmail: string): Promise<PujaBid[]> {
+    const pujaBids = await this.pujaBidRepository.find({
+      where: { user: { email: userEmail } },
+      relations: ['puja', 'user'], // Agregar relaciones necesarias
+    });
+  
+    if (pujaBids.length === 0) {
+      throw new NotFoundException('No se encontraron bids para esta puja.');
+    }
+  
+    return pujaBids;
+    }
+
   async makeBid(makeBidDto: MakeBidDto): Promise<PujaBid> {
-    const { userId, pujaId, bidAmount } = makeBidDto;
+    const { userId, pujaId, bidAmount} = makeBidDto;
 
     // Verificar que la puja existe
     const puja = await this.pujaRepository.findOne({ where: { id: pujaId }, relations: ['pujas','creator'] });
@@ -81,7 +138,7 @@ export class PujaService {
     }
 
     // Crear la nueva puja (bid)
-    const newBid = this.pujaBidRepository.create({ user, puja, amount: bidAmount });
+    const newBid = this.pujaBidRepository.create({ user, puja, amount: bidAmount});
 
     // Guardar la nueva puja
     return await this.pujaBidRepository.save(newBid);

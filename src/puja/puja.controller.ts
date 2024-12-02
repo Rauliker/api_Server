@@ -24,6 +24,14 @@ export class PujaController {
   makeBid(@Body() makeBidDto: MakeBidDto) {
     return this.pujaService.makeBid(makeBidDto);
   }
+  @Get('bid/:id')
+  getBid(@Param('id') id: number) {
+    return this.pujaService.getBidsByPuja(id);
+  }
+  @Get('user/:email')
+  getusersBid(@Param('email') email: string) {
+    return this.pujaService.getBidsByUser(email);
+  }
 
   @Delete(':id')
   deletePuja(@Param('id') id: number) {
