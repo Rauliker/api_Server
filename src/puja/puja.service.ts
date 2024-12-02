@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Image } from 'src/imagen/imagen.entity';
 import { User } from 'src/users/users.entity';
@@ -14,6 +14,7 @@ export class PujaService {
     private pujaRepository: Repository<Puja>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(PujaBid) private readonly pujaBidRepository: Repository<PujaBid>,
     @InjectRepository(Image)
     private imagenRepository: Repository<Image>,  
   ) {}
@@ -43,51 +44,57 @@ export class PujaService {
   }
 
   async findAll(): Promise<Puja[]> {
-    return this.pujaRepository.find({ relations: ['creator', 'imagenes'] });
+    return this.pujaRepository.find({ relations: ['creator', 'imagenes','pujas'] });
   }
 
   async findOne(id: number): Promise<Puja> {
-    const puja = await this.pujaRepository.findOne({ where: { id }, relations: ['creator', 'imagenes'] });
+    const puja = await this.pujaRepository.findOne({ where: { id }, relations: ['creator', 'imagenes','pujas'] });
     if (!puja) {
       throw new NotFoundException('Puja no encontrada.');
     }
     return puja;
   }
 
-  async makeBid(makeBidDto: MakeBidDto): Promise<Puja> {
-    const { pujaId, userId, bidAmount } = makeBidDto;
-    const puja = await this.pujaRepository.findOne({ where: { id: pujaId }, relations: ['creator', 'pujas'] });
-  
+  async makeBid(makeBidDto: MakeBidDto): Promise<PujaBid> {
+    const { userId, pujaId, bidAmount } = makeBidDto;
+
+    // Verificar que la puja existe
+    const puja = await this.pujaRepository.findOne({ where: { id: pujaId }, relations: ['pujas','creator'] });
     if (!puja) {
-      throw new NotFoundException('Subasta no encontrada.');
+      throw new NotFoundException('Puja no encontrada');
     }
-  
+
+    // Verificar que el usuario existe
     const user = await this.userRepository.findOne({ where: { email: userId } });
     if (!user) {
-      throw new NotFoundException('Usuario no encontrado.');
+      throw new NotFoundException('Usuario no encontrado');
     }
-  
+    
     if (puja.creator.email === userId) {
-      throw new BadRequestException('No puedes pujar en tu propia subasta.');
+      throw new NotFoundException('El creador de la puja no puede realizar una puja.');
     }
   
-    if (new Date() > new Date(puja.fechaFin)) {
-      throw new BadRequestException('La subasta ya ha finalizado.');
+    // Validación 2: Verificar que la fecha límite no haya pasado
+    const currentDate = new Date();
+    if (currentDate > puja.fechaFin) {
+      throw new NotFoundException('La fecha límite para esta puja ha expirado.');
     }
-  
-    // Si ya existe una puja del mismo usuario, la actualiza
-    const existingBid = puja.pujas.find((bid) => bid.user.email === userId);
-  
-    if (existingBid) {
-      existingBid.amount = bidAmount; // Actualiza la puja
-    } else {
-      // Si no existe, crea una nueva puja
-      const newPujaBid = new PujaBid();
-      newPujaBid.user = user;
-      newPujaBid.amount = bidAmount;
-      puja.pujas.push(newPujaBid);
+
+    // Crear la nueva puja (bid)
+    const newBid = this.pujaBidRepository.create({ user, puja, amount: bidAmount });
+
+    // Guardar la nueva puja
+    return await this.pujaBidRepository.save(newBid);
+  }
+  async deletePuja(id: number): Promise<string> {
+    const puja = await this.pujaRepository.findOne({ where: { id }, relations: ['pujas'] });
+    if (!puja) {
+      throw new NotFoundException('Puja no encontrada');
     }
-  
-    return this.pujaRepository.save(puja);  // Guarda la subasta con las pujas actualizadas
+
+    // Al eliminar la puja, también se eliminan las pujas relacionadas (bids) gracias a onDelete: 'CASCADE'
+    await this.pujaRepository.remove(puja);
+
+    return `Puja con ID ${id} y sus bids relacionadas fueron eliminadas`;
   }
 }  

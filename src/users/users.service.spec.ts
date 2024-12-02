@@ -40,7 +40,7 @@ describe('UserService', () => {
   
     jest.spyOn(repository, 'save').mockResolvedValue(user as User);
   
-    expect(await service.createUser(user as any)).toEqual(user); // Se usa "as any" para evitar el conflicto
+    expect(await service.createUser(user as any)).toEqual(user); 
   });
   
   

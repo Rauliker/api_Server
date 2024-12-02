@@ -1,4 +1,4 @@
-import { IsBoolean, IsDecimal, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDecimal, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateUserDto {
   @IsEmail()
@@ -47,7 +47,8 @@ export class UpdateUserDto {
   banned?: boolean;
 
   @IsOptional()
-  @IsDecimal()
+  @IsDecimal({ decimal_digits: '0,2' }) // Asegura que sea un decimal con hasta 2 decimales
+  @Min(0) // Balance no puede ser negativo
   balance?: number;
 
   @IsOptional()

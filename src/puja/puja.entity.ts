@@ -1,6 +1,6 @@
 import { Image } from 'src/imagen/imagen.entity';
 import { User } from 'src/users/users.entity';
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { PujaBid } from './pujaBid.entity';
 
 @Entity()
@@ -9,6 +9,7 @@ export class Puja {
   id: number;
 
   @ManyToOne(() => User, (user) => user.createdPujas)
+  @JoinColumn({ name: 'email' })
   creator: User;
 
   @OneToMany(() => Image, (imagen) => imagen.puja)

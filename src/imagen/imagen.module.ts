@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Puja } from 'src/puja/puja.entity';
 import { Image } from './imagen.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Image])],
+  imports: [TypeOrmModule.forFeature([Image,Puja])],
   controllers: [],
   providers: [],
   exports: [TypeOrmModule],

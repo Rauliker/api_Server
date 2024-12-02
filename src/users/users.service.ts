@@ -60,11 +60,11 @@ export class UserService {
   }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.find({ relations: ['provincia','localidad'] });
+    return this.userRepository.find({ relations: ['provincia','localidad','createdPujas','pujaBids'] });
   }
 
   async findOne(email: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { email }, relations: ['provincia','localidad'] });
+    const user = await this.userRepository.findOne({ where: { email }, relations: ['provincia','localidad','createdPujas','pujaBids'] });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
     }
@@ -72,7 +72,7 @@ export class UserService {
   }
 
   async login(email: string, password: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { email, password, banned: false  }, relations: ['provincia','localidad'] });
+    const user = await this.userRepository.findOne({ where: { email, password, banned: false  }, relations: ['provincia','localidad','createdPujas','pujaBids'] });
     if (!user) {
       throw new NotFoundException('Credenciales incorrectas.');
     }

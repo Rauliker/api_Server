@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { CreatePujaDto, MakeBidDto } from './puja.dto';
 import { PujaService } from './puja.service';
 @Controller('pujas')
@@ -23,5 +23,10 @@ export class PujaController {
   @Post('bid')
   makeBid(@Body() makeBidDto: MakeBidDto) {
     return this.pujaService.makeBid(makeBidDto);
+  }
+
+  @Delete(':id')
+  deletePuja(@Param('id') id: number) {
+    return this.pujaService.deletePuja(id);
   }
 }

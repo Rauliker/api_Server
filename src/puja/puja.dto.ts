@@ -38,6 +38,9 @@ export class MakeBidDto {
     @IsNotEmpty()
     @IsDecimal()
     bidAmount: number; // Cantidad ofrecida en la puja
+    @IsNotEmpty()
+    @IsDecimal()
+    email_user: string;
   }
 
   export class UpdatePujaDto {
