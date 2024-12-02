@@ -8,7 +8,7 @@ export class Puja {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, (user) => user.createdPujas)
+  @ManyToOne(() => User, (user) => user.createdPujas,{ onDelete: 'CASCADE' })
   @JoinColumn({ name: 'email' })
   creator: User;
 
@@ -26,6 +26,9 @@ export class Puja {
 
   @Column('decimal')
   pujaInicial: number;
+
+  @Column('decimal')
+  pujaActual: number;
 
   @Column()
   fechaFin: Date;

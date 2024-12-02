@@ -13,6 +13,10 @@ export class CreatePujaDto {
   @IsDecimal()
   pujaInicial: number;
 
+  @IsOptional()
+  @IsDecimal()
+  pujaActual: number;
+
   @IsNotEmpty()
   @IsDate()
   fechaFin: Date;
@@ -52,6 +56,10 @@ export class MakeBidDto {
     @IsOptional()
     @IsDecimal()
     pujaInicial?: number;
+
+    @IsOptional()
+    @IsDecimal()
+    pujaActual?: number
   
     @IsOptional()
     @IsDate()

@@ -32,7 +32,6 @@ export class PujaController {
   getusersBid(@Param('email') email: string) {
     return this.pujaService.getBidsByUser(email);
   }
-
   @Delete(':id')
   deletePuja(@Param('id') id: number) {
     return this.pujaService.deletePuja(id);
