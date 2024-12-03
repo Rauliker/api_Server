@@ -50,6 +50,50 @@ export class PujaService {
   
     return savedPuja;
   }
+  
+  
+
+  async findAll(): Promise<any[]> {
+    const pujas = await this.pujaRepository.find({
+      relations: ['creator', 'imagenes'],
+    });
+  
+    // Agregar los bids a cada puja solo si existen
+    const pujasWithBids = await Promise.all(
+      pujas.map(async (puja) => {
+        const bids = await this.getBidsByPuja(puja.id);
+        return { ...puja, bids: bids.length > 0 ? bids : undefined }; // Solo agregar bids si existen
+      }),
+    );
+  
+    return pujasWithBids;
+  }
+  
+
+  async findOne(id: number): Promise<any> {
+    const puja = await this.pujaRepository.findOne({
+      where: { id },
+      relations: ['creator', 'imagenes'],
+    });
+  
+    if (!puja) {
+      throw new NotFoundException('Puja no encontrada.');
+    }
+  
+    // Obtener los bids asociados
+    const bids = await this.getBidsByPuja(id);
+  
+    return { ...puja, bids: bids.length > 0 ? bids : undefined };
+  }
+  
+  async getBidsByPuja(pujaId: number): Promise<PujaBid[]> {
+    const pujaBids = await this.pujaBidRepository.find({
+      where: { puja: { id: pujaId } },
+      relations: ['puja', 'user'], // Agregar relaciones necesarias
+    });
+  
+    return pujaBids; // Devuelve un array vacío si no hay bids
+  }
 
   async getBidsByUser(userEmail: string): Promise<PujaBid[]> {
     const pujaBids = await this.pujaBidRepository.find({
@@ -60,7 +104,6 @@ export class PujaService {
     if (pujaBids.length === 0) {
       throw new NotFoundException('No se encontraron bids para esta puja.');
     }
-  
     return pujaBids;
   }
   async deletePuja(id: number): Promise<string> {

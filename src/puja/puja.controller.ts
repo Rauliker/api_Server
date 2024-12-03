@@ -28,7 +28,7 @@ export class PujaController {
   getBid(@Param('id') id: number) {
     return this.pujaService.getBidsByPuja(id);
   }
-  @Get('user/:email')
+  @Get('users/:email')
   getusersBid(@Param('email') email: string) {
     return this.pujaService.getBidsByUser(email);
   }
