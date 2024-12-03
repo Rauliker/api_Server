@@ -58,4 +58,7 @@ export class UpdateUserDto {
   @IsOptional()
   @IsNumber()
   localidadId?: number;
+  @IsOptional()
+  @IsString()
+  calle?: string;
 }

@@ -4,6 +4,9 @@ export class CreatePujaDto {
   @IsNotEmpty()
   @IsString()
   nombre: string;
+  @IsNotEmpty()
+  @IsString()
+  open: boolean;
 
   @IsNotEmpty()
   @IsString()
@@ -12,10 +15,6 @@ export class CreatePujaDto {
   @IsNotEmpty()
   @IsDecimal()
   pujaInicial: number;
-
-  @IsOptional()
-  @IsDecimal()
-  pujaActual: number;
 
   @IsNotEmpty()
   @IsDate()
@@ -42,12 +41,19 @@ export class MakeBidDto {
     @IsNotEmpty()
     @IsDecimal()
     bidAmount: number; // Cantidad ofrecida en la puja
+
+    @IsNotEmpty()
+    @IsString()
+    email_user: string;
   }
 
   export class UpdatePujaDto {
     @IsOptional()
     @IsString()
     nombre?: string;
+    @IsOptional()
+    @IsString()
+    open?: boolean;
   
     @IsOptional()
     @IsString()
@@ -57,10 +63,6 @@ export class MakeBidDto {
     @IsDecimal()
     pujaInicial?: number;
 
-    @IsOptional()
-    @IsDecimal()
-    pujaActual?: number
-  
     @IsOptional()
     @IsDate()
     fechaFin?: Date;

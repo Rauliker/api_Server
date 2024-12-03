@@ -36,4 +36,8 @@ export class PujaController {
   deletePuja(@Param('id') id: number) {
     return this.pujaService.deletePuja(id);
   }
+  @Get('pay/:id')
+  pagar(@Param('id') id: number) {
+    return this.pujaService.pay(id);
+  }
 }

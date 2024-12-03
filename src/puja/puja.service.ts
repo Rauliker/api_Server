@@ -50,54 +50,6 @@ export class PujaService {
   
     return savedPuja;
   }
-  
-  
-
-  async findAll(): Promise<any[]> {
-    const pujas = await this.pujaRepository.find({
-      relations: ['creator', 'imagenes'],
-    });
-  
-    // Agregar los bids a cada puja
-    const pujasWithBids = await Promise.all(
-      pujas.map(async (puja) => {
-        const bids = await this.getBidsByPuja(puja.id);
-        return { ...puja, bids };
-      }),
-    );
-  
-    return pujasWithBids;
-  }
-  
-
-  async findOne(id: number): Promise<any> {
-    const puja = await this.pujaRepository.findOne({
-      where: { id },
-      relations: ['creator', 'imagenes'],
-    });
-  
-    if (!puja) {
-      throw new NotFoundException('Puja no encontrada.');
-    }
-  
-    // Obtener los bids asociados
-    const bids = await this.getBidsByPuja(id);
-  
-    return { ...puja, bids };
-  }
-  
-  async getBidsByPuja(pujaId: number): Promise<PujaBid[]> {
-  const pujaBids = await this.pujaBidRepository.find({
-    where: { puja: { id: pujaId } },
-    relations: ['puja', 'user'], // Agregar relaciones necesarias
-  });
-
-  if (pujaBids.length === 0) {
-    throw new NotFoundException('No se encontraron bids para esta puja.');
-  }
-
-  return pujaBids;
-  }
 
   async getBidsByUser(userEmail: string): Promise<PujaBid[]> {
     const pujaBids = await this.pujaBidRepository.find({
@@ -111,12 +63,78 @@ export class PujaService {
   
     return pujaBids;
   }
+  async deletePuja(id: number): Promise<string> {
+    const puja = await this.pujaRepository.findOne({ where: { id }, relations: ['pujas'] });
+    if (!puja) {
+      throw new NotFoundException('Puja no encontrada');
+    }
 
-  
+    // Al eliminar la puja, también se eliminan las pujas relacionadas (bids) gracias a onDelete: 'CASCADE'
+    await this.pujaRepository.remove(puja);
+
+    return `Puja con ID ${id} y sus bids relacionadas fueron eliminadas`;
+  }
+
+  private async getPujaActual(pujaId: number, pujaInicial: number): Promise<number> {
+    const maxBid = await this.pujaBidRepository
+      .createQueryBuilder('puja_bids')
+      .innerJoin('users', 'users', 'puja_bids.userEmail = users.email')
+      .where('puja_bids.pujaId = :pujaId', { pujaId})
+      .andWhere('users.banned = false')
+      .select('MAX(puja_bids.amount)', 'max')
+      .getRawOne();
+    
+    return maxBid?.max ? parseFloat(maxBid.max) : pujaInicial;
+  }
+
+  async findAll(): Promise<any[]> {
+    const pujas = await this.pujaRepository.find({
+      relations: ['creator', 'imagenes','pujas'],
+    });
+
+    const pujasWithPujaActual = await Promise.all(
+      pujas.map(async (puja) => {
+        const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+        return { ...puja, pujaActual };
+      }),
+    );
+
+    return pujasWithPujaActual;
+  }
+
+  async findOne(id: number): Promise<any> {
+    const puja = await this.pujaRepository.findOne({
+      where: { id },
+      relations: ['creator', 'imagenes', 'pujas'],
+    });
+
+    if (!puja) {
+      throw new NotFoundException('Puja no encontrada.');
+    }
+
+    const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+    return { ...puja, pujaActual };
+  }
+
+  async findOneUsers(id: number): Promise<any> {
+    const puja = await this.pujaRepository.findOne({
+      where: { id },
+      relations: ['creator', 'imagenes'],
+    });
+
+    if (!puja) {
+      throw new NotFoundException('Puja no encontrada.');
+    }
+
+    const bids = await this.getBidsByPuja(id);
+    const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+
+    return { ...puja, bids, pujaActual };
+  }
+
   async makeBid(makeBidDto: MakeBidDto): Promise<PujaBid> {
-    const { userId, pujaId, bidAmount } = makeBidDto;
-  
-    // Verificar que la puja existe
+    const { userId, pujaId, bidAmount, email_user } = makeBidDto;
+
     const puja = await this.pujaRepository.findOne({
       where: { id: pujaId },
       relations: ['creator'],
@@ -124,27 +142,24 @@ export class PujaService {
     if (!puja) {
       throw new NotFoundException('Puja no encontrada');
     }
-  
-    // Verificar que el usuario existe
-    const user = await this.userRepository.findOne({ where: { email: userId } });
+
+    const user = await this.userRepository.findOne({ where: { email: userId, banned:false } });
     if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
+      throw new NotFoundException('Usuario no encontrado o esta baneado');
     }
-  
-    // Verificar que el creador de la puja no sea el usuario
     if (puja.creator.email === userId) {
       throw new NotFoundException('El creador de la puja no puede realizar una puja.');
     }
-  
-    // Verificar que la fecha límite de la puja no haya expirado
+
     const currentDate = new Date();
     if (currentDate > puja.fechaFin) {
       throw new NotFoundException('La fecha límite para esta puja ha expirado.');
     }
-    if(puja.pujaActual>=bidAmount){
-      throw new NotFoundException('El monto de la puja debe ser mayor al monto anterior.');
+
+    const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+    if (bidAmount <= pujaActual) {
+      throw new NotFoundException('El monto de la puja debe ser mayor al monto actual.');
     }
-  
     // Verificar si el usuario ya realizó una puja para esta subasta
     const existingBid = await this.pujaBidRepository
       .createQueryBuilder('puja_bids')
@@ -159,35 +174,59 @@ export class PujaService {
     if (existingBid) {
       
       const updatedBid = this.pujaBidRepository.merge({
-        id:existingBid.id,
+        id: existingBid.id,
         user,
         puja,
         amount: bidAmount,
+        email_user: email_user
       });
       // Guardar la puja actualizada en la base de datos
       return await this.pujaBidRepository.save(updatedBid);
     } else {
       // Si el usuario no ha realizado una puja, creamos una nueva
-      const newBid = this.pujaBidRepository.create({ user, puja, amount: bidAmount });
-      await this.pujaRepository.update(
-        { id: puja.id }, // Criterio para encontrar el registro
-        { pujaActual: bidAmount } // Campos que deseas actualizar
-      );
-      
+      const newBid = this.pujaBidRepository.create({ user, puja, amount: bidAmount, email_user});
       return await this.pujaBidRepository.save(newBid);
     }
-    
   }
-  
-  async deletePuja(id: number): Promise<string> {
-    const puja = await this.pujaRepository.findOne({ where: { id }, relations: ['pujas'] });
+
+  async getBidsByPuja(pujaId: number): Promise<PujaBid[]> {
+    return this.pujaBidRepository.find({
+      where: { puja: { id: pujaId } },
+      relations: ['puja', 'user'],
+    });
+  }
+
+  async pay(pujaId: number): Promise<string> {
+    // Obtener la puja
+    const puja = await this.pujaRepository.findOne({
+        where: { id: pujaId },
+        relations: ['creator'], // Asegúrate de que se cargue el creador
+    });
+
     if (!puja) {
-      throw new NotFoundException('Puja no encontrada');
+        throw new NotFoundException('Puja no encontrada');
     }
 
-    // Al eliminar la puja, también se eliminan las pujas relacionadas (bids) gracias a onDelete: 'CASCADE'
-    await this.pujaRepository.remove(puja);
+    // Obtener la puja actual (la más alta)
+    const highestBid = await this.pujaBidRepository
+        .createQueryBuilder('bid')
+        .where('bid.pujaId = :pujaId', { pujaId })
+        .orderBy('bid.amount', 'DESC')
+        .getOne();
 
-    return `Puja con ID ${id} y sus bids relacionadas fueron eliminadas`;
-  }
+    if (!highestBid) {
+        throw new NotFoundException('No hay pujas para esta subasta.');
+    }
+
+    // Obtener el creador de la puja
+    const creator = puja.creator;
+
+    // Sumar el monto de la puja más alta al balance del creador
+    creator.balance = (creator.balance || 0) + highestBid.amount; // Asegúrate de que el balance esté inicializado
+
+    // Actualizar el balance del creador en la base de datos
+    await this.userRepository.save(creator);
+
+    return `Se ha añadido ${highestBid.amount} al balance del creador ${creator.email}.`;
+}
 }  

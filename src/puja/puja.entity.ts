@@ -21,14 +21,14 @@ export class Puja {
   @Column()
   nombre: string;
 
+  @Column({ default: true })
+  open: boolean;
+
   @Column()
   descripcion: string;
 
   @Column('decimal')
   pujaInicial: number;
-
-  @Column('decimal')
-  pujaActual: number;
 
   @Column()
   fechaFin: Date;

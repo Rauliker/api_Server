@@ -32,6 +32,9 @@ export class User {
   @ManyToOne(() => Localidad, (localidad) => localidad.users)
   @JoinColumn({ name: 'id_localidad' })
   localidad: Localidad;
+
+  @Column()
+  calle: string;
   
   @OneToMany(() => Puja, (puja) => puja.creator)
   createdPujas: Puja[];
