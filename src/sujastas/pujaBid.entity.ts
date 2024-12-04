@@ -12,6 +12,9 @@ export class PujaBid {
   @ManyToOne(() => User, (user) => user.pujaBids)
   user: User;
 
+  @Column({ default: false })
+  iswinner: boolean;
+
   @Column('decimal', { precision: 10, scale: 2 })
   amount: number;
 

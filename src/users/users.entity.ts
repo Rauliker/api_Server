@@ -1,7 +1,7 @@
 import { Localidad } from 'src/localidad/localidad.entity';
 import { Provincia } from 'src/provincia/provinvia.entity';
-import { Puja } from 'src/puja/puja.entity';
-import { PujaBid } from 'src/puja/pujaBid.entity';
+import { Puja } from 'src/sujastas/puja.entity';
+import { PujaBid } from 'src/sujastas/pujaBid.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryColumn } from 'typeorm';
 
 @Entity('users')

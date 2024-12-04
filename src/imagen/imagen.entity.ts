@@ -1,4 +1,4 @@
-import { Puja } from 'src/puja/puja.entity';
+import { Puja } from 'src/sujastas/puja.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('imagenes')

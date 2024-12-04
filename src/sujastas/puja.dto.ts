@@ -37,7 +37,11 @@ export class MakeBidDto {
     @IsNotEmpty()
     @IsNumber()
     pujaId: number; // El ID de la puja
-  
+
+    @IsNotEmpty()
+    @IsString()
+    iswinner: boolean;
+
     @IsNotEmpty()
     @IsDecimal()
     bidAmount: number; // Cantidad ofrecida en la puja

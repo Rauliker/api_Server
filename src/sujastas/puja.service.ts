@@ -132,7 +132,7 @@ export class PujaService {
   }
 
   async makeBid(makeBidDto: MakeBidDto): Promise<PujaBid> {
-    const { userId, pujaId, bidAmount, email_user } = makeBidDto;
+    const { userId, pujaId, bidAmount, email_user, iswinner } = makeBidDto;
 
     const puja = await this.pujaRepository.findOne({
       where: { id: pujaId },
@@ -176,6 +176,7 @@ export class PujaService {
         id: existingBid.id,
         user,
         puja,
+        iswinner,
         amount: bidAmount,
         email_user: email_user
       });
