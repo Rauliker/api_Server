@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FirebaseService } from 'src/firebase/firebase_service';
 import { Localidad } from 'src/localidad/localidad.entity';
 import { Provincia } from 'src/provincia/provinvia.entity';
 import { Repository } from 'typeorm';
@@ -16,6 +17,7 @@ export class UserService {
       
       @InjectRepository(Provincia)
       private readonly provinciaRepository: Repository<Provincia>,
+    private readonly firebaseService: FirebaseService, // Inyecta FirebaseService
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
@@ -36,16 +38,24 @@ export class UserService {
       throw new BadRequestException('El usuario ya existe.');
     }
 
+    // Crear el usuario en Firebase
+    const firebaseUser = await this.firebaseService.createFirebaseUser(createUserDto.email, createUserDto.password);
+    if (!firebaseUser) {
+      throw new BadRequestException('Error al crear el usuario en Firebase');
+    }
+
+    // Crear el usuario en la base de datos
     const user = this.userRepository.create({
       email: createUserDto.email,
       username: createUserDto.username,
-      password: createUserDto.password,
+      password: createUserDto.password, // Guarda la contraseña de manera segura en la base de datos
       role: createUserDto.role,
       banned: createUserDto.banned,
-      balance:createUserDto.balance,
+      balance: createUserDto.balance,
       provincia,
       localidad,
     });
+
     return this.userRepository.save(user);
   }
 
