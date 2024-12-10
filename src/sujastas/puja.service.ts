@@ -39,9 +39,9 @@ export class PujaService {
   
     // Asociar las imágenes a la puja
     const imagenes = imagenesUrls.map((url) => {
-      const imagen = new Image(); // Asegúrate de tener la entidad `Image`
+      const imagen = new Image();
       imagen.url = url;
-      imagen.puja = savedPuja; // Establecer la relación
+      imagen.puja = savedPuja;
       return imagen;
     });
   
@@ -50,6 +50,7 @@ export class PujaService {
   
     return savedPuja;
   }
+  
 
   async getBidsByUser(userEmail: string): Promise<PujaBid[]> {
     const pujaBids = await this.pujaBidRepository.find({

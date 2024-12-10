@@ -22,7 +22,7 @@ export class User {
   @Column({ default: false })
   banned: boolean;
 
-  @Column({ nullable: true, type: 'decimal', precision: 10, scale: 2 }) // Almacena hasta 10 dígitos en total, 2 de ellos decimales
+  @Column({type: 'decimal', precision: 10, scale: 2,default: 0 }) // Almacena hasta 10 dígitos en total, 2 de ellos decimales
   balance?: number;
 
   @ManyToOne(() => Provincia, (provincia) => provincia.users)

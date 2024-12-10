@@ -1,13 +1,31 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import { CreatePujaDto, MakeBidDto } from './puja.dto';
 import { PujaService } from './puja.service';
+
 @Controller('pujas')
 export class PujaController {
   constructor(private readonly pujaService: PujaService) {}
 
   @Post()
-  createPuja(@Body() createPujaDto: CreatePujaDto) {
-    return this.pujaService.createPuja(createPujaDto);
+  @UseInterceptors(
+    FilesInterceptor('files', 5, {
+      storage: diskStorage({
+        destination: './images', // Directorio donde se guardarán las imágenes
+        filename: (req, file, callback) => {
+          const filename = `${Date.now()}-${file.originalname}`;
+          callback(null, filename); // Usar un nombre único con timestamp
+        },
+      }),
+    }),
+  )
+  async createPuja(@Body() createPujaDto: CreatePujaDto, @UploadedFiles() files: Express.Multer.File[]) {
+    console.log(files); // Aquí tienes el archivo subido
+    console.log(createPujaDto);
+    // Generamos las URLs de las imágenes y las pasamos al servicio
+    const imagenesUrls = files.map(file => `http://localhost:3000/images/${file.filename}`);
+    return this.pujaService.createPuja({ ...createPujaDto, imagenes: imagenesUrls });
   }
 
   @Get()
