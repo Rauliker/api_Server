@@ -24,11 +24,12 @@ export class FirebaseService {
     return admin.firestore();
   }
 // Métodos para interactuar con Firebase
-async createFirebaseUser(email: string, password: string) {
+async createFirebaseUser(email: string,active:boolean, password: string) {
     try {
       const userRecord = await admin.auth().createUser({
         email,
         password,
+        disabled: !active
       });
       return userRecord;
     } catch (error) {

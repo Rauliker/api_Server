@@ -39,7 +39,7 @@ export class UserService {
     }
 
     // Crear el usuario en Firebase
-    const firebaseUser = await this.firebaseService.createFirebaseUser(createUserDto.email, createUserDto.password);
+    const firebaseUser = await this.firebaseService.createFirebaseUser(createUserDto.email,createUserDto.banned, createUserDto.password);
     if (!firebaseUser) {
       throw new BadRequestException('Error al crear el usuario en Firebase');
     }
