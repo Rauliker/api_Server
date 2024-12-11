@@ -9,7 +9,7 @@ export class PujaBid {
   @ManyToOne(() => Puja, (puja) => puja.pujas, { onDelete: 'CASCADE' })
   puja: Puja;
 
-  @ManyToOne(() => User, (user) => user.pujaBids)
+  @ManyToOne(() => User, (user) => user.pujaBids, { onDelete: 'CASCADE' })
   user: User;
 
   @Column({ default: false })
