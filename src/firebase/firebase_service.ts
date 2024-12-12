@@ -42,4 +42,14 @@ async createFirebaseUser(email: string,active:boolean, password: string) {
     // Firebase Auth SDK no tiene un método directo para login con email y contraseña desde el backend,
     // por lo que normalmente usas la API REST de Firebase o el SDK del cliente en el frontend.
   }
+
+  // Método para eliminar un usuario de Firebase por su correo electrónico
+  async deleteFirebaseUser(email: string): Promise<void> {
+    try {
+      const userRecord = await admin.auth().getUserByEmail(email);
+      await admin.auth().deleteUser(userRecord.uid);
+    } catch (error) {
+      throw new Error('No se pudo eliminar el usuario de Firebase: ' + error.message);
+    }
+  }
 }

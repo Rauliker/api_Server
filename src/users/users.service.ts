@@ -89,4 +89,21 @@ export class UserService {
     }
     return user;
   }
+  async deleteUser(email: string): Promise<void> {
+    // Verificar si el usuario existe en la base de datos
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    // Eliminar el usuario de Firebase
+    try {
+      await this.firebaseService.deleteFirebaseUser(email);
+    } catch (error) {
+      throw new BadRequestException('Error al eliminar el usuario de Firebase: ' + error.message);
+    }
+
+    // Eliminar el usuario de la base de datos
+    await this.userRepository.remove(user);
+  }
 }

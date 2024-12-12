@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { CreateUserDto, UpdateUserDto } from './user.dto';
 import { UserService } from './users.service';
 
@@ -30,5 +30,10 @@ export class UserController {
   @Post('login')
   login(@Body() { email, password }: { email: string; password: string }) {
     return this.userService.login(email, password);
+  }
+
+  @Delete(':email')
+  delete(@Param('email') email: string) {
+    return this.userService.deleteUser(email);
   }
 }
