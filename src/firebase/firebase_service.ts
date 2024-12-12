@@ -29,7 +29,7 @@ async createFirebaseUser(email: string,active:boolean, password: string) {
       const userRecord = await admin.auth().createUser({
         email,
         password,
-        disabled: !active
+        disabled: active
       });
       return userRecord;
     } catch (error) {

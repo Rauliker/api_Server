@@ -7,8 +7,8 @@ export class LocalidadController {
   constructor(private readonly localidadService: LocalidadService) {}
 
   @Post()
-  createLocalidad(@Body() createLocalidadDto: CreateLocalidadDto) {
-    return this.localidadService.createLocalidad(createLocalidadDto);
+  createLocalidad(@Body() createLocalidadDto: CreateLocalidadDto[]) {
+    return this.localidadService.createMultipleLocalidades(createLocalidadDto);
   }
 
   @Get()

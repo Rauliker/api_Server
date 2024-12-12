@@ -52,8 +52,9 @@ export class UserService {
       role: createUserDto.role,
       banned: createUserDto.banned,
       balance: createUserDto.balance,
+      calle: createUserDto.calle,
       provincia,
-      localidad,
+      localidad
     });
 
     return this.userRepository.save(user);

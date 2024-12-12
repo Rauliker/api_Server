@@ -23,7 +23,7 @@ export class ProvinciaService {
       relations: ['localidades'],
     });
   }
-  async createProvincia(createProvinciaDto: CreateProvinciaDto): Promise<Provincia> {
+  async createProvincia(createProvinciaDto: CreateProvinciaDto[]): Promise<Provincia[]> {
     const provincia = this.provinciaRepository.create(createProvinciaDto);
     return this.provinciaRepository.save(provincia);
   }

@@ -7,33 +7,40 @@ import { Localidad } from './localidad.entity';
 
 @Injectable()
 export class LocalidadService {
-    constructor(
-      @InjectRepository(Localidad)
-      private readonly localidadRepository: Repository<Localidad>,
-      
-      @InjectRepository(Provincia)
-      private readonly provinciaRepository: Repository<Provincia>,
-    ) {}
-  async createLocalidad(createLocalidadDto: CreateLocalidadDto): Promise<Localidad> {
-    // Primero, obtener la provincia por su ID
-    const provincia = await this.provinciaRepository.findOne({
-      where: { id_provincia: createLocalidadDto.provinciaId },
-    });
+  constructor(
+    @InjectRepository(Localidad)
+    private readonly localidadRepository: Repository<Localidad>,
+    
+    @InjectRepository(Provincia)
+    private readonly provinciaRepository: Repository<Provincia>,
+  ) {}
 
-    if (!provincia) {
-      throw new Error('Provincia no encontrada');
+  // Método para crear varias localidades
+  async createMultipleLocalidades(createLocalidadDtos: CreateLocalidadDto[]): Promise<Localidad[]> {
+    const localidades: Localidad[] = [];
+
+    for (const createLocalidadDto of createLocalidadDtos) {
+      // Obtener la provincia por su ID
+      const provincia = await this.provinciaRepository.findOne({
+        where: { id_provincia: createLocalidadDto.provinciaId },
+      });
+
+      if (!provincia) {
+        throw new Error(`Provincia con ID ${createLocalidadDto.provinciaId} no encontrada`);
+      }
+
+      // Crear la localidad y asignar la provincia
+      const localidad = this.localidadRepository.create({
+        nombre: createLocalidadDto.nombre,
+        provincia,  // Asignamos la provincia encontrada
+      });
+
+      localidades.push(localidad); // Añadir la localidad al array
     }
 
-    // Crear la localidad y asignar la provincia
-    const localidad = this.localidadRepository.create({
-      nombre: createLocalidadDto.nombre,
-      provincia,  // Asignamos la provincia encontrada
-    });
-
-    // Guardar la localidad en la base de datos
-    return this.localidadRepository.save(localidad);
+    // Guardar todas las localidades en la base de datos
+    return this.localidadRepository.save(localidades);
   }
-
 
   // Obtener todas las localidades con su provincia
   async findAll() {

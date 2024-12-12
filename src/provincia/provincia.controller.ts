@@ -6,7 +6,7 @@ export class ProvinciaController {
   constructor(private readonly provinciaService: ProvinciaService) {}
 
   @Post()
-  createProvincia(@Body() createProvinciaDto: CreateProvinciaDto) {
+  createProvincia(@Body() createProvinciaDto: CreateProvinciaDto[]) {
     return this.provinciaService.createProvincia(createProvinciaDto);
   }
 

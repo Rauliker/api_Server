@@ -30,6 +30,10 @@ export class CreateUserDto {
   @IsNotEmpty()
   @IsNumber()
   localidadId?: number;
+  
+  @IsNotEmpty()
+  @IsString()
+  calle: string;
 }
 
 
