@@ -38,6 +38,11 @@ export class UserService {
       throw new BadRequestException('El usuario ya existe.');
     }
 
+    const usernameExists = await this.userRepository.findOne({ where: { email: createUserDto.username } });
+    if (userExists) {
+      throw new BadRequestException('El nombre de usuario ya existe.');
+    }
+
     // Crear el usuario en Firebase
     const firebaseUser = await this.firebaseService.createFirebaseUser(createUserDto.email,createUserDto.banned, createUserDto.password);
     if (!firebaseUser) {
@@ -48,7 +53,7 @@ export class UserService {
     const user = this.userRepository.create({
       email: createUserDto.email,
       username: createUserDto.username,
-      password: createUserDto.password, // Guarda la contraseña de manera segura en la base de datos
+      password: createUserDto.password, 
       role: createUserDto.role,
       banned: createUserDto.banned,
       balance: createUserDto.balance,
