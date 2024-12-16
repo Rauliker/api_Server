@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { CreatePujaDto, MakeBidDto } from './puja.dto';
-import { PujaService } from './puja.service';
+import { CreatePujaDto, MakeBidDto } from './subastas.dto';
+import { PujaService } from './subastas.service';
 
 @Controller('pujas')
 export class PujaController {

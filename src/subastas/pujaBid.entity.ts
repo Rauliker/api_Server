@@ -1,6 +1,6 @@
 import { User } from 'src/users/users.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Puja } from './puja.entity';
+import { Puja } from './subastas.entity';
 
 @Entity('puja_bids') // Nombre de la tabla
 export class PujaBid {

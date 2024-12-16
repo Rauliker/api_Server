@@ -3,9 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Image } from 'src/imagen/imagen.entity';
 import { User } from 'src/users/users.entity';
 import { Repository } from 'typeorm';
-import { CreatePujaDto, MakeBidDto } from './puja.dto';
-import { Puja } from './puja.entity';
 import { PujaBid } from './pujaBid.entity';
+import { CreatePujaDto, MakeBidDto } from './subastas.dto';
+import { Puja } from './subastas.entity';
 
 @Injectable()
 export class PujaService {

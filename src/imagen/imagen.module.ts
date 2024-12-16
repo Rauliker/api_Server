@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Puja } from 'src/sujastas/puja.entity';
+import { Puja } from 'src/subastas/subastas.entity';
 import { Image } from './imagen.entity';
 
 @Module({

@@ -1,6 +1,6 @@
 # Nodejs
 package-lock.json
-src/firebase/proyecto-final-raul-firebase-adminsdk-z7o8m-ced26d559b.json
+src/firebase/*.json
 
 # compiled output
 /dist

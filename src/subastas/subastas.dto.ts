@@ -22,11 +22,11 @@ export class CreatePujaDto {
 
   @IsNotEmpty()
   @IsString()
-  creatorId: string; // El ID del usuario que crea la puja (email)
+  creatorId: string; 
 
   @IsArray()
   @IsString({ each: true })
-  imagenes: string[]; // URLs de las imágenes
+  imagenes: string[]; 
 }
 
 export class MakeBidDto {
