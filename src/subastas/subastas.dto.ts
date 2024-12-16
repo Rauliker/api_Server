@@ -1,11 +1,12 @@
-import { IsArray, IsDate, IsDecimal, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsArray, IsBoolean, IsDate, IsDecimal, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreatePujaDto {
   @IsNotEmpty()
   @IsString()
   nombre: string;
   @IsNotEmpty()
-  @IsString()
+  @IsBoolean()
   open: boolean;
 
   @IsNotEmpty()
@@ -18,6 +19,7 @@ export class CreatePujaDto {
 
   @IsNotEmpty()
   @IsDate()
+  @Transform(({ value }) => new Date(value))
   fechaFin: Date;
 
   @IsNotEmpty()
