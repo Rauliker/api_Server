@@ -21,7 +21,7 @@ import { UtilsModule } from './utils/utils.module';
 @Module({
   imports: [
     MulterModule.register({
-      dest: './images', // Carpeta de destino
+      dest: './images',
       limits: {
         fileSize: 5 * 1024 * 1024, // Límite de tamaño de archivo (5MB)
       },

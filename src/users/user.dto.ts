@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsBoolean, IsDecimal, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateUserDto {
@@ -11,6 +12,10 @@ export class CreateUserDto {
   @IsNotEmpty()
   @IsString()
   password: string;
+
+  @IsOptional()
+  @IsString()
+  avatar?: string;
   @IsOptional()
   @IsString()
   role: number;
@@ -25,11 +30,13 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   @IsNumber()
-  provinciaId?: number;
+  @Transform(({ value }) => parseInt(value, 10))
+  provinciaId: number;
 
   @IsNotEmpty()
   @IsNumber()
-  localidadId?: number;
+  @Transform(({ value }) => parseInt(value, 10))
+  localidadId: number;
   
   @IsNotEmpty()
   @IsString()
@@ -40,6 +47,10 @@ export class CreateUserDto {
 export class UpdateUserDto {
   @IsOptional()
   @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
   username?: string;
 
   @IsOptional()
@@ -47,20 +58,22 @@ export class UpdateUserDto {
   password?: string;
 
   @IsOptional()
+  @IsString()
+  avatar?: string;
+  
+  @IsOptional()
   @IsBoolean()
   banned?: boolean;
 
   @IsOptional()
-  @IsDecimal({ decimal_digits: '0,2' }) // Asegura que sea un decimal con hasta 2 decimales
-  @Min(0) // Balance no puede ser negativo
+  @IsDecimal()
+  @Min(0)
   balance?: number;
 
   @IsOptional()
-  @IsNumber()
   provinciaId?: number;
 
   @IsOptional()
-  @IsNumber()
   localidadId?: number;
   @IsOptional()
   @IsString()

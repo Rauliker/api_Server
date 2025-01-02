@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { CreatePujaDto, MakeBidDto } from './subastas.dto';
+import { CreatePujaDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
 import { PujaService } from './subastas.service';
 
 @Controller('pujas')
@@ -14,8 +14,8 @@ export class PujaController {
       storage: diskStorage({
         destination: './images', // Directorio donde se guardarán las imágenes
         filename: (req, file, callback) => {
-          const filename = `${Date.now()}-${file.originalname}`;
-          callback(null, filename); // Usar un nombre único con timestamp
+          const filename = `${req.body.creatorId}-${file.originalname}`; // Asegúrate de que creatorId esté en el cuerpo de la solicitud
+          callback(null, filename); // Usar un nombre único
         },
       }),
     }),
@@ -24,7 +24,7 @@ export class PujaController {
     console.log(files); // Aquí tienes el archivo subido
     console.log(createPujaDto);
     // Generamos las URLs de las imágenes y las pasamos al servicio
-    const imagenesUrls = files.map(file => `http://localhost:3000/images/${file.filename}`);
+    const imagenesUrls = files.map(file => `/images/${file.filename}`);
     return this.pujaService.createPuja({ ...createPujaDto, imagenes: imagenesUrls });
   }
 
@@ -33,11 +33,30 @@ export class PujaController {
     return this.pujaService.findAll();
   }
 
+  @Put(':id')
+  async updatePuja(
+    @Param('id') id: number,
+    @Body() updatePujaDto: UpdatePujaDto,
+  ) {
+
+    // Llamamos al servicio para actualizar la puja
+    return this.pujaService.updatePuja(id, {
+      ...updatePujaDto,
+    });
+  }
+
   @Get(':id')
   findOnePuja(@Param('id') id: number) {
     return this.pujaService.findOne(id);
   }
-
+  @Get('other/:id') 
+  findOtherPuja(@Param('id') id: string) {
+    return this.pujaService.getPujaByOtherUser(id);
+  }
+  @Get('my/:id') 
+  findMyPuja(@Param('id') id: string) {
+    return this.pujaService.getPujasByUser(id);
+  }
   @Post('bid')
   makeBid(@Body() makeBidDto: MakeBidDto) {
     return this.pujaService.makeBid(makeBidDto);

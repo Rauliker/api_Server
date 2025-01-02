@@ -5,9 +5,9 @@ export class CreatePujaDto {
   @IsNotEmpty()
   @IsString()
   nombre: string;
-  @IsNotEmpty()
+  @IsOptional()
   @IsBoolean()
-  open: boolean;
+  open?: boolean;
 
   @IsNotEmpty()
   @IsString()
@@ -25,7 +25,7 @@ export class CreatePujaDto {
   @IsNotEmpty()
   @IsString()
   creatorId: string; 
-
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   imagenes: string[]; 
@@ -40,7 +40,7 @@ export class MakeBidDto {
     @IsNumber()
     pujaId: number; // El ID de la puja
 
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
     iswinner: boolean;
 
@@ -71,11 +71,7 @@ export class MakeBidDto {
 
     @IsOptional()
     @IsDate()
+    @Transform(({ value }) => new Date(value))
     fechaFin?: Date;
-  
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    imagenes?: string[];
   }
   

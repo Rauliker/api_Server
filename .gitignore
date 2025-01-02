@@ -1,7 +1,8 @@
 # Nodejs
 package-lock.json
 src/firebase/*.json
-
+images/*.*
+images/avatar/*.*
 # compiled output
 /dist
 /node_modules

@@ -23,8 +23,8 @@ export class FirebaseService {
   getFirestore() {
     return admin.firestore();
   }
-// Métodos para interactuar con Firebase
-async createFirebaseUser(email: string,active:boolean, password: string) {
+  // Métodos para interactuar con Firebase
+  async createFirebaseUser(email: string,active:boolean, password: string) {
     try {
       const userRecord = await admin.auth().createUser({
         email,
@@ -36,6 +36,23 @@ async createFirebaseUser(email: string,active:boolean, password: string) {
       throw new Error(error.message);
     }
   }
+
+  async updateFirebaseUser(email: string, password: string) {
+    try {
+      const userRecord = await admin.auth().getUserByEmail(email);
+      const userUpdate= await admin.auth().updateUser(
+        userRecord.uid,
+        {
+          email:email,
+          password:password,
+        }
+      );
+      return userUpdate;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
 
   async deleteFirebaseUser(email: string): Promise<void> {
     try {

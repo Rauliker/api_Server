@@ -11,18 +11,20 @@ export class User {
 
   @Column()
   username: string;
-
+  
   @Column()
   password: string;
+
+  @Column({ default: "no" })
+  avatar: string;
 
   @Column({ default: 2 })
   role: number;
 
-
   @Column({ default: false })
   banned: boolean;
 
-  @Column({type: 'decimal', precision: 10, scale: 2,default: 0 }) // Almacena hasta 10 dígitos en total, 2 de ellos decimales
+  @Column({type: 'decimal', precision: 10, scale: 2,default: 0 })
   balance?: number;
 
   @ManyToOne(() => Provincia, (provincia) => provincia.users)

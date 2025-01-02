@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FirebaseService } from 'src/firebase/firebase_service';
 import { Localidad } from 'src/localidad/localidad.entity';
 import { Provincia } from 'src/provincia/provinvia.entity';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './user.dto';
 import { User } from './users.entity';
 
@@ -17,10 +17,10 @@ export class UserService {
       
       @InjectRepository(Provincia)
       private readonly provinciaRepository: Repository<Provincia>,
-    private readonly firebaseService: FirebaseService, // Inyecta FirebaseService
+    private readonly firebaseService: FirebaseService, 
   ) {}
 
-  async createUser(createUserDto: CreateUserDto): Promise<User> {
+  async createUser(createUserDto: CreateUserDto, imagenesUrls: string[]): Promise<User> {
     const provincia = await this.provinciaRepository.findOne({
       where: { id_provincia: createUserDto.provinciaId },
     });
@@ -48,21 +48,24 @@ export class UserService {
     if (!firebaseUser) {
       throw new BadRequestException('Error al crear el usuario en Firebase');
     }
-
     // Crear el usuario en la base de datos
-    const user = this.userRepository.create({
-      email: createUserDto.email,
-      username: createUserDto.username,
-      password: createUserDto.password, 
-      role: createUserDto.role,
-      banned: createUserDto.banned,
-      balance: createUserDto.balance,
-      calle: createUserDto.calle,
-      provincia,
-      localidad
-    });
+    const avatar = imagenesUrls.length > 0 ? imagenesUrls[imagenesUrls.length - 1] : null;
 
-    return this.userRepository.save(user);
+  const user = this.userRepository.create({
+    email: createUserDto.email,
+    username: createUserDto.username,
+    password: createUserDto.password,
+    avatar: avatar,
+    role: createUserDto.role,
+    banned: createUserDto.banned,
+    balance: createUserDto.balance,
+    calle: createUserDto.calle,
+    provincia,
+    localidad,
+  });
+
+  return this.userRepository.save(user);
+
   }
 
   async updateUser(email: string, updateUserDto: UpdateUserDto): Promise<User> {
@@ -70,9 +73,25 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
     }
+    if(updateUserDto.password!=null){
+    const firebaseUser = await this.firebaseService.updateFirebaseUser(updateUserDto.email, updateUserDto.password);}
+    
+    Object.assign(user, updateUserDto);
+    return this.userRepository.save(user);
+  }
+
+  async updatePass(email: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
 
     Object.assign(user, updateUserDto);
     return this.userRepository.save(user);
+  }
+
+  async findAllExcpt(id:string): Promise<User[]> {
+    return this.userRepository.find({where:{email: Not(id)}, relations: ['provincia','localidad','createdPujas','pujaBids'] });
   }
 
   async findAll(): Promise<User[]> {
@@ -95,7 +114,6 @@ export class UserService {
     return user;
   }
   async deleteUser(email: string): Promise<void> {
-    // Verificar si el usuario existe en la base de datos
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
