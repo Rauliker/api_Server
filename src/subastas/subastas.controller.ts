@@ -14,7 +14,7 @@ export class PujaController {
       storage: diskStorage({
         destination: './images', // Directorio donde se guardarán las imágenes
         filename: (req, file, callback) => {
-          const filename = `${req.body.creatorId}-${file.originalname}`; // Asegúrate de que creatorId esté en el cuerpo de la solicitud
+          const filename = `${req.body.creatorId}-${req.body.name}-${file.originalname}`; // Asegúrate de que creatorId esté en el cuerpo de la solicitud
           callback(null, filename); // Usar un nombre único
         },
       }),

@@ -1,11 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as fs from 'fs';
 import { Image } from 'src/imagen/imagen.entity';
 import { User } from 'src/users/users.entity';
 import { Not, Repository } from 'typeorm';
 import { PujaBid } from './pujaBid.entity';
 import { CreatePujaDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
 import { Puja } from './subastas.entity';
+
 
 @Injectable()
 export class PujaService {
@@ -16,8 +19,10 @@ export class PujaService {
     private userRepository: Repository<User>,
     @InjectRepository(PujaBid) private readonly pujaBidRepository: Repository<PujaBid>,
     @InjectRepository(Image)
-    private imagenRepository: Repository<Image>,  
+    private imagenRepository: Repository<Image>, 
   ) {}
+  
+  private readonly logger = new Logger(PujaService.name);
 
   async createPuja(createPujaDto: CreatePujaDto): Promise<Puja> {
     const { creatorId, imagenes: imagenesUrls, ...pujaData } = createPujaDto;
@@ -72,7 +77,23 @@ export class PujaService {
     // Al eliminar la puja, también se eliminan las pujas relacionadas (bids) gracias a onDelete: 'CASCADE'
     await this.pujaRepository.remove(puja);
 
-    return `Puja con ID ${id} y sus bids relacionadas fueron eliminadas`;
+    if (puja.imagenes) {
+        for (const imagen of puja.imagenes) {
+            const filePath = `./images/${imagen}`; 
+            try {
+                if (fs.existsSync(filePath)) {
+                    await fs.promises.unlink(filePath);
+                }
+            } catch (err) {
+                throw new BadRequestException(
+                    `Error al eliminar el archivo de avatar: ${err.message}`
+                );
+            }
+        }
+        
+      }
+
+    return `Subasta con ID ${id} y sus pujas relacionadas fueron eliminadas`;
   }
 
   async getPujaByOtherUser(userEmail: string): Promise<any[]> {
@@ -276,14 +297,60 @@ export class PujaService {
     }
 
     // Obtener el creador de la puja
-    const creator = puja.creator;
+    let email = puja.creator.email;
+    if (!email) {
+        throw new NotFoundException('El creador no tiene un email válido.');
+    }
 
-    // Sumar el monto de la puja más alta al balance del creador
-    creator.balance = (creator.balance || 0) + highestBid.amount; // Asegúrate de que el balance esté inicializado
+
+    const creator = await this.userRepository.findOne({ where: { email } });
+    if (!creator) {
+        throw new NotFoundException('El creador no fue encontrado.');
+    }
+    
+    email = highestBid.email_user;
+    const bidder = await this.userRepository.findOne({ where: { email } });
+    if (!bidder) {
+        throw new NotFoundException('El postor no fue encontrado.');
+    }
+
+    const currentBalance = Number(creator.balance || 0);
+    const bidAmount = Number(highestBid.amount);
+    let balance = currentBalance + bidAmount;
+    
+    const updatedCreator = this.userRepository.merge(creator, { balance });
 
     // Actualizar el balance del creador en la base de datos
-    await this.userRepository.save(creator);
+    await this.userRepository.save(updatedCreator);
+    const currentBidder = Number(bidder.balance || 0);
+    
+    balance = currentBidder - bidAmount;
+    const updatedBidder = this.userRepository.merge(bidder, { balance });
+
+    // Actualizar el balance del creador en la base de datos
+    await this.userRepository.save(updatedBidder);
 
     return `Se ha añadido ${highestBid.amount} al balance del creador ${creator.email}.`;
 }
+
+
+  @Cron('59 * * * * *')
+  async handleCron() {
+    let mesage="Las Subastas que han finalizado son: ";
+    const resultados = await this.pujaRepository
+      .createQueryBuilder('puja')
+      .select('puja.id', 'id')
+      .where('DATE(puja.fechaFin) <= DATE(NOW())')
+      .andWhere('puja.open=true')
+      .getRawMany();
+    for (const resultado of resultados) {
+      mesage+=resultado.id;
+      const puja = await this.findOne(resultado.id); 
+      const updatedPuja = this.pujaRepository.merge(puja, {"open": false});
+          await this.pujaRepository.save(updatedPuja);
+          this.pay(resultado.id);
+      }
+      this.logger.debug(mesage);
+    return resultados.map((resultado) => resultado.id);
+  }
 }  

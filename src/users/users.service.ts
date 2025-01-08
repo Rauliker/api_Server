@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as fs from 'fs';
 import { FirebaseService } from 'src/firebase/firebase_service';
 import { Localidad } from 'src/localidad/localidad.entity';
 import { Provincia } from 'src/provincia/provinvia.entity';
@@ -39,7 +40,7 @@ export class UserService {
     }
 
     const usernameExists = await this.userRepository.findOne({ where: { email: createUserDto.username } });
-    if (userExists) {
+    if (usernameExists) {
       throw new BadRequestException('El nombre de usuario ya existe.');
     }
 
@@ -76,7 +77,7 @@ export class UserService {
     if(updateUserDto.password!=null){
     const firebaseUser = await this.firebaseService.updateFirebaseUser(updateUserDto.email, updateUserDto.password);}
     
-    Object.assign(user, updateUserDto);
+    this.userRepository.merge(user, updateUserDto);
     return this.userRepository.save(user);
   }
 
@@ -114,19 +115,37 @@ export class UserService {
     return user;
   }
   async deleteUser(email: string): Promise<void> {
+    // Buscar el usuario en la base de datos
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
-      throw new NotFoundException('Usuario no encontrado.');
+        throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    // Verificar si el usuario tiene un avatar y eliminarlo si existe
+    if (user.avatar) {
+        const filePath = `./images/avatar/${user.avatar}`; // Ajusta la ruta según tu estructura
+        try {
+            if (fs.existsSync(filePath)) {
+                await fs.promises.unlink(filePath);
+            }
+        } catch (err) {
+            throw new BadRequestException(
+                `Error al eliminar el archivo de avatar: ${err.message}`
+            );
+        }
     }
 
     // Eliminar el usuario de Firebase
     try {
-      await this.firebaseService.deleteFirebaseUser(email);
+        await this.firebaseService.deleteFirebaseUser(email);
     } catch (error) {
-      throw new BadRequestException('Error al eliminar el usuario de Firebase: ' + error.message);
+        throw new BadRequestException(
+            `Error al eliminar el usuario de Firebase: ${error.message}`
+        );
     }
 
     // Eliminar el usuario de la base de datos
     await this.userRepository.remove(user);
-  }
+}
+
 }
