@@ -237,6 +237,20 @@ export class PujaService {
     if (bidAmount <= pujaActual) {
       throw new NotFoundException('El monto de la puja debe ser mayor al monto actual.');
     }
+
+    
+    const result = await this.pujaBidRepository
+    .createQueryBuilder('puja_bids')
+    .select('users.balance - COALESCE(SUM(puja_bids.amount), 0)', 'remainingBalance')
+    .innerJoin('users', 'users', 'puja_bids.userEmail = users.email')
+    .where('users.email = :userEmail', { userEmail: userId })
+    .getRawOne();
+
+  const remainingBalance = result.remainingBalance || 0;
+
+  if (remainingBalance < pujaActual) {
+    throw new NotFoundException('El saldo es insuficiente');
+  }
     // Verificar si el usuario ya realizó una puja para esta subasta
     const existingBid = await this.pujaBidRepository
       .createQueryBuilder('puja_bids')
