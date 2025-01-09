@@ -87,7 +87,7 @@ export class UserService {
       throw new NotFoundException('Usuario no encontrado.');
     }
 
-    Object.assign(user, updateUserDto);
+    this.userRepository.merge(user, updateUserDto);
     return this.userRepository.save(user);
   }
 
@@ -121,9 +121,8 @@ export class UserService {
         throw new NotFoundException('Usuario no encontrado.');
     }
 
-    // Verificar si el usuario tiene un avatar y eliminarlo si existe
     if (user.avatar) {
-        const filePath = `./images/avatar/${user.avatar}`; // Ajusta la ruta según tu estructura
+        const filePath = `.${user.avatar}`;
         try {
             if (fs.existsSync(filePath)) {
                 await fs.promises.unlink(filePath);

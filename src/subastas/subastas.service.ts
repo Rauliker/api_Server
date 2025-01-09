@@ -69,17 +69,17 @@ export class PujaService {
     return pujaBids;
   }
   async deletePuja(id: number): Promise<string> {
-    const puja = await this.pujaRepository.findOne({ where: { id }, relations: ['pujas'] });
+    const puja = await this.pujaRepository.findOne({ where: { id }, relations: ['pujas','imagenes'] });
     if (!puja) {
       throw new NotFoundException('Puja no encontrada');
     }
 
-    // Al eliminar la puja, también se eliminan las pujas relacionadas (bids) gracias a onDelete: 'CASCADE'
     await this.pujaRepository.remove(puja);
-
+    
     if (puja.imagenes) {
         for (const imagen of puja.imagenes) {
-            const filePath = `./images/${imagen}`; 
+            const filePath = `.${imagen.url}`; 
+            
             try {
                 if (fs.existsSync(filePath)) {
                     await fs.promises.unlink(filePath);
@@ -205,8 +205,6 @@ export class PujaService {
     const updatedPuja = this.pujaRepository.merge(puja, updatePujaDto);
     await this.pujaRepository.save(updatedPuja);
     return updatedPuja;
-
-    return puja;
   }
 
   async makeBid(makeBidDto: MakeBidDto): Promise<PujaBid> {
@@ -239,15 +237,14 @@ export class PujaService {
     }
 
     
-    const result = await this.pujaBidRepository
-    .createQueryBuilder('puja_bids')
-    .select('users.balance - COALESCE(SUM(puja_bids.amount), 0)', 'remainingBalance')
-    .innerJoin('users', 'users', 'puja_bids.userEmail = users.email')
-    .where('users.email = :userEmail', { userEmail: userId })
-    .getRawOne();
+    const result = await this.userRepository.findOne({
+      where: { email: email_user },
+      select: ['balance'],
+      });
 
-  const remainingBalance = result.remainingBalance || 0;
-
+  const remainingBalance = result.balance - bidAmount;
+    
+  this.logger.debug(result.balance);
   if (remainingBalance < pujaActual) {
     throw new NotFoundException('El saldo es insuficiente');
   }
@@ -357,6 +354,10 @@ export class PujaService {
       .where('DATE(puja.fechaFin) <= DATE(NOW())')
       .andWhere('puja.open=true')
       .getRawMany();
+    if (resultados.length === 0) {
+      this.logger.debug('No hay subastas finalizadas.');
+      return [];
+    }else{
     for (const resultado of resultados) {
       mesage+=resultado.id;
       const puja = await this.findOne(resultado.id); 
@@ -364,7 +365,7 @@ export class PujaService {
           await this.pujaRepository.save(updatedPuja);
           this.pay(resultado.id);
       }
-      this.logger.debug(mesage);
     return resultados.map((resultado) => resultado.id);
+    }
   }
 }  
