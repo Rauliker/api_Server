@@ -39,34 +39,84 @@ export class UserController {
     const tempFilePaths = files.map((file) => file.path);
 
     try {
-      // Crear usuario en la base de datos
       const imagenesUrls = files.map(
-        (file) => `/images/avatar/${file.filename}`, // URLs relativas
+        (file) => `/images/avatar/${file.filename}`,
       );
       const user = await this.userService.createUser(createUserDto, imagenesUrls);
 
-      // Mover imágenes del directorio temporal al final
       tempFilePaths.forEach((tempPath) => {
  
         const finalPath = path.join('./images/avatar', path.basename(tempPath));
-        fs.renameSync(tempPath, finalPath); // Mover archivo
+        fs.renameSync(tempPath, finalPath);
       });
 
       return user;
     } catch (error) {
-      // Eliminar archivos temporales en caso de error
       tempFilePaths.forEach((tempPath) => {
         if (fs.existsSync(tempPath)) {
           fs.unlinkSync(tempPath); 
         }
       });
-      throw error; // Propagar error
+      throw error;
     }
   }
 
+  @UseInterceptors(
+    FilesInterceptor('files', 1, {
+      storage: diskStorage({
+        destination: './temp',
+        filename: (req, file, callback) => {
+          const email = req.params?.email;
+          if (!email) {
+            callback(new BadRequestException('Email is required'), null);
+          } else {
+            const filename = `${email}-avatar${path.extname(file.originalname)}`;
+            callback(null, filename);
+          }
+        },
+      }),
+    }),
+  )
   @Put(':email')
-  updateUser(@Param('email') email: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.updateUser(email, updateUserDto);
+  async updateUser(
+    @Param('email') email: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const existingUser = await this.userService.findOne(email);
+    if (!existingUser) {
+      throw new BadRequestException('User not found');
+    }
+
+    const tempFilePaths = files?.map((file) => file.path) || [];
+    try {
+      if (files && files.length > 0) {
+        const imagenesUrls = files.map(
+          (file) => `/images/avatar/${file.filename}`,
+        );
+
+        const oldImagePath = `./images/avatar/${email}-avatar${path.extname(existingUser.avatar || '')}`;
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath); 
+        }
+
+        tempFilePaths.forEach((tempPath) => {
+          const finalPath = path.join('./images/avatar', path.basename(tempPath));
+          fs.renameSync(tempPath, finalPath);
+        });
+
+        updateUserDto.avatar = imagenesUrls[0];
+      }
+
+      return await this.userService.updateUser(email, updateUserDto);
+    } catch (error) {
+      tempFilePaths.forEach((tempPath) => {
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+      });
+      throw error;
+    }
   }
 
   @Get()
