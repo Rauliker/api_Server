@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { CreatePujaDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
@@ -29,8 +29,28 @@ export class PujaController {
   }
 
   @Get()
-  findAllPujas() {
-    return this.pujaService.findAll();
+  async findAllPujas(
+    @Query('search') search?: string,
+    @Query('open') open?: boolean, 
+    @Query('min') min?: number, 
+    @Query('max') max?: number,
+    @Query('date') date?: string, 
+
+  ) {
+    try {
+      return this.pujaService.findAll(search,open,min,max,date);
+    } catch (err) {
+      throw new HttpException(
+        {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          error: err,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        {
+          cause: err,
+        },
+      );
+    }
   }
 
   @Put(':id')
@@ -50,8 +70,13 @@ export class PujaController {
     return this.pujaService.findOne(id);
   }
   @Get('other/:id') 
-  findOtherPuja(@Param('id') id: string) {
-    return this.pujaService.getPujaByOtherUser(id);
+  findOtherPuja(@Param('id') id: string,
+  @Query('search') search?: string,
+  @Query('open') open?: boolean, 
+  @Query('min') min?: number, 
+  @Query('max') max?: number,
+  @Query('date') date?: string, ) {
+    return this.pujaService.getPujaByOtherUser(id,search,open,min,max,date);
   }
   @Get('my/:id') 
   findMyPuja(@Param('id') id: string) {

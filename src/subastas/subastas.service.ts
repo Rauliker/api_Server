@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as fs from 'fs';
 import { Image } from 'src/imagen/imagen.entity';
 import { User } from 'src/users/users.entity';
-import { Not, Repository } from 'typeorm';
+import { Like, Not, Repository } from 'typeorm';
 import { PujaBid } from './pujaBid.entity';
 import { CreatePujaDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
 import { Puja } from './subastas.entity';
@@ -60,7 +60,7 @@ export class PujaService {
   async getBidsByUser(userEmail: string): Promise<PujaBid[]> {
     const pujaBids = await this.pujaBidRepository.find({
       where: { user: { email: userEmail } },
-      relations: ['puja', 'user'], // Agregar relaciones necesarias
+      relations: ['pujas', 'user'],
     });
   
     if (pujaBids.length === 0) {
@@ -96,30 +96,63 @@ export class PujaService {
     return `Subasta con ID ${id} y sus pujas relacionadas fueron eliminadas`;
   }
 
-  async getPujaByOtherUser(userEmail: string): Promise<any[]> {
-    const pujas = await this.pujaRepository.find({
-        where: { creator: { email: Not(userEmail) } },
-        relations: ['creator', 'pujas','imagenes'], // Asegúrate de incluir las relaciones necesarias
-    });
-
-    if (pujas.length === 0) {
-        throw new NotFoundException('No se encontraron pujas de otros usuarios.');
-        
-    }else{
-      const pujasWithPujaActual = await Promise.all(
-        pujas.map(async (puja) => {
-          const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
-          return { ...puja, pujaActual };
-        }),
-      );
+  async getPujaByOtherUser(
+    userEmail: string,
+    search?: string,
+    open?: boolean,
+    min?: number,
+    max?: number,
+    fechaInsertada?: string,
+  ): Promise<any[]> {
+    const where: any[] = [{ creator: { email: Not(userEmail) } }];
   
-      return pujasWithPujaActual;
+    if (search) {
+      where.push({ nombre: Like(`%${search}%`) });
+      where.push({ descripcion: Like(`%${search}%`) });
     }
+  
+    if (open) {
+      const searchConditions = where.map((condition) => ({
+        ...condition,
+        open: open,
+      }));
+      where.splice(0, where.length, ...searchConditions);
+    }
+  
+    const pujas = await this.pujaRepository.find({
+      where,
+      relations: ['creator', 'pujas', 'imagenes'],
+    });
+  
+    if (pujas.length === 0) {
+      throw new NotFoundException('No se encontraron pujas de otros usuarios.');
+    }
+  
+    const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
+  
+    const pujasWithPujaActual = await Promise.all(
+      pujas.map(async (puja) => {
+        const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+  
+        if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
+          return null;
+        }
+  
+        if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
+          return null;
+        }
+  
+        return { ...puja, pujaActual };
+      }),
+    );
+  
+    return pujasWithPujaActual.filter((puja) => puja !== null);
   }
+  
   async getPujasByUser(userEmail: string): Promise<Puja[]> {
     const pujas = await this.pujaRepository.find({
         where: { creator: { email: (userEmail) } },
-        relations: ['creator', 'imagenes'], 
+        relations: ['creator', 'pujas', 'imagenes'], 
     });
 
     if (pujas.length === 0) {
@@ -135,6 +168,7 @@ export class PujaService {
       return pujasWithPujaActual;
     }
   }
+  
   private async getPujaActual(pujaId: number, pujaInicial: number): Promise<number> {
     const maxBid = await this.pujaBidRepository
         .createQueryBuilder('puja_bids')
@@ -144,24 +178,76 @@ export class PujaService {
         .select('MAX(puja_bids.amount)', 'max')
         .getRawOne();
 
-    // Asegúrate de que el valor devuelto sea un número de tipo double
     return maxBid?.max ? parseFloat(maxBid.max) : parseFloat(pujaInicial.toString());
-}
+  }
 
-  async findAll(): Promise<any[]> {
+  async findAll(
+    search?: string,
+    open?: boolean,
+    min?: number,
+    max?: number,
+    fechaInsertada?: string,
+  ): Promise<any[]> {
+    const where = [];
+
+    if (search) {
+      where.push({ nombre: Like(`%${search}%`) });
+      where.push({ descripcion: Like(`%${search}%`) });
+    }
+
+    if (open) {
+      if (search) {
+        const searchConditions = where.map((condition) => {
+          const newCondition: Record<string, any> = {};
+          for (const key in condition) {
+            if (condition.hasOwnProperty(key)) {
+              newCondition[key] = condition[key];
+            }
+          }
+          newCondition.open = open;
+          return newCondition;
+        });
+
+        where.splice(0, where.length);
+        searchConditions.forEach((condition) => where.push(condition));
+      } else {
+        where.push({ open: open });
+      }
+    }
+
     const pujas = await this.pujaRepository.find({
-      relations: ['creator', 'imagenes','pujas'],
+      where,
+      relations: ['creator', 'imagenes', 'pujas'],
     });
+
+    const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
 
     const pujasWithPujaActual = await Promise.all(
       pujas.map(async (puja) => {
         const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
-        return { ...puja, pujaActual };
+
+        if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
+          return null;
+        }
+
+        if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
+          return null;
+        }
+
+        const pujaWithActual: Record<string, any> = {};
+        for (const key in puja) {
+          if (puja.hasOwnProperty(key)) {
+            pujaWithActual[key] = puja[key];
+          }
+        }
+        pujaWithActual.pujaActual = pujaActual;
+        return pujaWithActual;
       }),
     );
 
-    return pujasWithPujaActual;
+    return pujasWithPujaActual.filter((puja) => puja !== null);
   }
+
 
   async findOne(id: number): Promise<any> {
     const puja = await this.pujaRepository.findOne({
@@ -199,8 +285,6 @@ export class PujaService {
     if (!puja) {
       throw new Error('Puja no encontrada');
     }
-    // Actualiza la puja
-
     // Actualiza la puja con los nuevos datos
     const updatedPuja = this.pujaRepository.merge(puja, updatePujaDto);
     await this.pujaRepository.save(updatedPuja);
@@ -244,7 +328,7 @@ export class PujaService {
 
   const remainingBalance = result.balance - bidAmount;
     
-  this.logger.debug(result.balance);
+  // this.logger.debug(result.balance);
   if (remainingBalance < pujaActual) {
     throw new NotFoundException('El saldo es insuficiente');
   }
@@ -355,7 +439,7 @@ export class PujaService {
       .andWhere('puja.open=true')
       .getRawMany();
     if (resultados.length === 0) {
-      this.logger.debug('No hay subastas finalizadas.');
+      // this.logger.debug('No hay subastas finalizadas.');
       return [];
     }else{
     for (const resultado of resultados) {
