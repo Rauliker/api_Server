@@ -125,7 +125,7 @@ export class PujaService {
     });
   
     if (pujas.length === 0) {
-      throw new NotFoundException('No se encontraron pujas de otros usuarios.');
+      throw new NotFoundException('6000');
     }
   
     const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
@@ -149,24 +149,57 @@ export class PujaService {
     return pujasWithPujaActual.filter((puja) => puja !== null);
   }
   
-  async getPujasByUser(userEmail: string): Promise<Puja[]> {
-    const pujas = await this.pujaRepository.find({
-        where: { creator: { email: (userEmail) } },
-        relations: ['creator', 'pujas', 'imagenes'], 
-    });
-
-    if (pujas.length === 0) {
-        throw new NotFoundException('No se encontraron subastas del usuario de otros usuarios.');
-    }else{
-      const pujasWithPujaActual = await Promise.all(
-        pujas.map(async (puja) => {
-          const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
-          return { ...puja, pujaActual };
-        }),
-      );
+  async getPujasByUser(
+    userEmail: string,
+    search?: string,
+    open?: boolean,
+    min?: number,
+    max?: number,
+    fechaInsertada?: string,
+  ): Promise<any[]> {
+    const where: any[] = [{ creator: { email: (userEmail) } }];
   
-      return pujasWithPujaActual;
+    if (search) {
+      where.push({ nombre: Like(`%${search}%`) });
+      where.push({ descripcion: Like(`%${search}%`) });
     }
+  
+    if (open) {
+      const searchConditions = where.map((condition) => ({
+        ...condition,
+        open: open,
+      }));
+      where.splice(0, where.length, ...searchConditions);
+    }
+  
+    const pujas = await this.pujaRepository.find({
+      where,
+      relations: ['creator', 'pujas', 'imagenes'],
+    });
+  
+    if (pujas.length === 0) {
+      throw new NotFoundException('6000');
+    }
+  
+    const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
+  
+    const pujasWithPujaActual = await Promise.all(
+      pujas.map(async (puja) => {
+        const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+  
+        if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
+          return null;
+        }
+  
+        if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
+          return null;
+        }
+  
+        return { ...puja, pujaActual };
+      }),
+    );
+  
+    return pujasWithPujaActual.filter((puja) => puja !== null);
   }
   
   private async getPujaActual(pujaId: number, pujaInicial: number): Promise<number> {

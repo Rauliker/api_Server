@@ -14,7 +14,7 @@ export class PujaController {
       storage: diskStorage({
         destination: './images', // Directorio donde se guardarán las imágenes
         filename: (req, file, callback) => {
-          const filename = `${req.body.creatorId}-${req.body.name}-${file.originalname}`; // Asegúrate de que creatorId esté en el cuerpo de la solicitud
+          const filename = file.originalname; 
           callback(null, filename); // Usar un nombre único
         },
       }),
@@ -79,8 +79,13 @@ export class PujaController {
     return this.pujaService.getPujaByOtherUser(id,search,open,min,max,date);
   }
   @Get('my/:id') 
-  findMyPuja(@Param('id') id: string) {
-    return this.pujaService.getPujasByUser(id);
+  findMyPuja(@Param('id') id: string,
+  @Query('search') search?: string,
+  @Query('open') open?: boolean, 
+  @Query('min') min?: number, 
+  @Query('max') max?: number,
+  @Query('date') date?: string) {
+    return this.pujaService.getPujasByUser(id,search,open,min,max,date);
   }
   @Post('bid')
   makeBid(@Body() makeBidDto: MakeBidDto) {
