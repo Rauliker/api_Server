@@ -311,17 +311,65 @@ export class PujaService {
 
     return { ...puja, bids, pujaActual };
   }
-
+  async deletePujaImages(id: number, eliminatedImages: string[]) {
+    const puja = await this.findOne(id);
+  
+    if (!puja) {
+      throw new NotFoundException('Puja no encontrada');
+    }
+  
+    if (eliminatedImages && eliminatedImages.length) {
+      for (const image of eliminatedImages) {
+        const pujaImg = puja.imagenes.find((img) => img.url === image);
+  
+        if (pujaImg) {
+          try {
+            const filePath = `.${pujaImg.url}`;
+            if (fs.existsSync(filePath)) {
+              await fs.promises.unlink(filePath); // Eliminar archivo del sistema
+            }
+            await this.imagenRepository.remove(pujaImg); // Eliminar de la base de datos
+          } catch (err) {
+            this.logger.error(`Error al eliminar la imagen: ${err.message}`);
+            throw new BadRequestException(
+              `Error al eliminar la imagen: ${err.message}`,
+            );
+          }
+        }
+      }
+    } else {
+      throw new BadRequestException(
+        'No se proporcionaron imágenes para eliminar',
+      );
+    }
+  
+    return { message: 'Imágenes eliminadas con éxito', eliminatedImages };
+  }
+  
+  
   async updatePuja(id: number, updatePujaDto: UpdatePujaDto) {
-    const puja = await this.findOne(id); // Encuentra la puja existente
-
+    
+    const puja = await this.findOne(id );
+    
+    const {imagenes: imagenesUrls, ...pujaData } = updatePujaDto;
+    
     if (!puja) {
       throw new Error('Puja no encontrada');
     }
-    // Actualiza la puja con los nuevos datos
-    const updatedPuja = this.pujaRepository.merge(puja, updatePujaDto);
-    await this.pujaRepository.save(updatedPuja);
-    return updatedPuja;
+    Object.assign(puja, pujaData);
+    const savedPuja = await this.pujaRepository.save(puja);
+    // Actualizar imágenes
+    if (imagenesUrls && imagenesUrls.length) {
+      const newImages = imagenesUrls.map((url) => {
+        const imagen = new Image();
+        imagen.url = url;
+        imagen.puja = savedPuja;
+        return imagen;
+      });
+      await this.imagenRepository.save(newImages);
+    }    
+    return puja;
+
   }
 
   async makeBid(makeBidDto: MakeBidDto): Promise<PujaBid> {

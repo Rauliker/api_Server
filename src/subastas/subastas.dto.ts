@@ -70,6 +70,16 @@ export class MakeBidDto {
     pujaInicial?: number;
 
     @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    eliminatedImages?: string[];
+    
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    imagenes: string[]; 
+
+    @IsOptional()
     @IsDate()
     @Transform(({ value }) => new Date(value))
     fechaFin?: Date;

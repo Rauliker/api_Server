@@ -54,16 +54,40 @@ export class PujaController {
   }
 
   @Put(':id')
+  @UseInterceptors(
+    FilesInterceptor('files', 5, {
+      storage: diskStorage({
+        destination: './images', // Directorio donde se guardarán las imágenes
+        filename: (req, file, callback) => {
+          const filename = file.originalname; 
+          callback(null, filename); // Usar un nombre único
+        },
+      }),
+    }),
+  )
   async updatePuja(
     @Param('id') id: number,
     @Body() updatePujaDto: UpdatePujaDto,
+    @UploadedFiles() files: Express.Multer.File[]
   ) {
-
-    // Llamamos al servicio para actualizar la puja
+    // Mapear las URLs de las imágenes
+    const imagenesUrls = files.map(file => `/images/${file.filename}`);
+  
+    // Llamar al servicio para actualizar la puja
     return this.pujaService.updatePuja(id, {
       ...updatePujaDto,
+      imagenes: imagenesUrls,
     });
   }
+  @Delete(':id/eliminar-imagenes')
+  async deleteImagePuja(
+    @Param('id') id: number,
+    @Body() updatePujaDto: UpdatePujaDto,
+  ) {
+    // Llamar al servicio para eliminar las imágenes de la puja
+    return this.pujaService.deletePujaImages(id, updatePujaDto.eliminatedImages);
+  }
+
 
   @Get(':id')
   findOnePuja(@Param('id') id: number) {
