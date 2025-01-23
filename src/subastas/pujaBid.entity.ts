@@ -20,4 +20,7 @@ export class PujaBid {
 
   @Column()
   email_user: string;
+
+  @Column()
+  fecha: Date;
 }

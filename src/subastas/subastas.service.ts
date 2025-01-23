@@ -422,7 +422,6 @@ export class PujaService {
       .andWhere('puja.id = ' +pujaId+'')
       .select('puja_bids.*')
       .getRawOne();
-
     // Verificar si el usuario ya realizó una puja
     if (existingBid) {
       
@@ -432,13 +431,14 @@ export class PujaService {
         puja,
         iswinner,
         amount: bidAmount,
-        email_user: email_user
+        email_user: email_user,
+        fecha:currentDate
       });
       // Guardar la puja actualizada en la base de datos
       return await this.pujaBidRepository.save(updatedBid);
     } else {
       // Si el usuario no ha realizado una puja, creamos una nueva
-      const newBid = this.pujaBidRepository.create({ user, puja, amount: bidAmount, email_user});
+      const newBid = this.pujaBidRepository.create({ user, puja, amount: bidAmount, email_user,fecha:currentDate});
       return await this.pujaBidRepository.save(newBid);
     }
   }
@@ -507,7 +507,34 @@ export class PujaService {
     await this.userRepository.save(updatedBidder);
 
     return `Se ha añadido ${highestBid.amount} al balance del creador ${creator.email}.`;
-}
+  }
+
+  async win(pujaId: number): Promise<PujaBid> {
+    const highestBid = await this.pujaBidRepository
+      .createQueryBuilder('puja_bids')
+      .where('puja_bids.pujaId = :pujaId', { pujaId })
+      .orderBy('puja_bids.amount', 'DESC')
+      .addOrderBy('puja_bids.fecha', 'ASC')
+      .getOne();
+  
+    if (!highestBid) {
+      throw new NotFoundException('No hay pujas para esta subasta.');
+    }
+  
+    const updatedBid = this.pujaBidRepository.merge({
+      id: highestBid.id,
+      iswinner: true,
+      puja: highestBid.puja,
+      user: highestBid.user,
+      amount: highestBid.amount,
+      email_user: highestBid.email_user,
+      fecha: highestBid.fecha
+    });
+    return await this.pujaBidRepository.save(updatedBid);
+  }
+  async auto(max:number, up:number){
+    return max;
+  }
 
 
   @Cron('59 * * * * *')
@@ -527,8 +554,9 @@ export class PujaService {
       mesage+=resultado.id;
       const puja = await this.findOne(resultado.id); 
       const updatedPuja = this.pujaRepository.merge(puja, {"open": false});
-          await this.pujaRepository.save(updatedPuja);
-          this.pay(resultado.id);
+      await this.pujaRepository.save(updatedPuja);
+      this.win(resultado.id);
+      this.pay(resultado.id);
       }
     return resultados.map((resultado) => resultado.id);
     }

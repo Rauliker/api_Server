@@ -51,8 +51,36 @@ export class MakeBidDto {
     @IsNotEmpty()
     @IsString()
     email_user: string;
-  }
 
+    @IsNotEmpty()
+    @IsDate()
+    fecha: Date;
+  }
+  export class UpdateBidDto {
+    @IsOptional()
+    @IsString()
+    userId?: string; // El ID del usuario que realiza la puja (email)
+  
+    @IsOptional()
+    @IsNumber()
+    pujaId?: number; // El ID de la puja
+
+    @IsOptional()
+    @IsString()
+    iswinner?: boolean;
+
+    @IsOptional()
+    @IsDecimal()
+    bidAmount?: number; // Cantidad ofrecida en la puja
+
+    @IsOptional()
+    @IsString()
+    email_user?: string;
+
+    @IsOptional()
+    @IsDate()
+    fecha?: Date;
+  }
   export class UpdatePujaDto {
     @IsOptional()
     @IsString()

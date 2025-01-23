@@ -131,4 +131,8 @@ export class PujaController {
   pagar(@Param('id') id: number) {
     return this.pujaService.pay(id);
   }
+  @Get('win/:id')
+  ganador(@Param('id') id: number) {
+    return this.pujaService.win(id);
+  }
 }
