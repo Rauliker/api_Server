@@ -373,8 +373,18 @@ export class PujaService {
   }
 
   async makeBid(makeBidDto: MakeBidDto): Promise<PujaBid> {
-    const { userId, pujaId, bidAmount, email_user, iswinner } = makeBidDto;
-
+    const {
+      userId,
+      pujaId,
+      bidAmount,
+      email_user,
+      iswinner,
+      is_auto,
+      max_auto_bid,
+      increment,
+    } = makeBidDto;
+  
+    // Verificar si la subasta existe
     const puja = await this.pujaRepository.findOne({
       where: { id: pujaId },
       relations: ['creator'],
@@ -382,66 +392,166 @@ export class PujaService {
     if (!puja) {
       throw new NotFoundException('Puja no encontrada');
     }
-
-    const user = await this.userRepository.findOne({ where: { email: userId, banned:false } });
+  
+    // Verificar si el usuario existe y no está baneado
+    const user = await this.userRepository.findOne({
+      where: { email: userId, banned: false },
+    });
     if (!user) {
-      throw new NotFoundException('Usuario no encontrado o esta baneado');
+      throw new NotFoundException('Usuario no encontrado o está baneado');
     }
+  
+    // Verificar que el creador de la puja no participe en su propia subasta
     if (puja.creator.email === userId) {
       throw new NotFoundException('El creador de la puja no puede realizar una puja.');
     }
-
+  
+    // Validar la fecha de finalización de la subasta
     const currentDate = new Date();
     if (currentDate > puja.fechaFin) {
       throw new NotFoundException('La fecha límite para esta puja ha expirado.');
     }
-
+  
+    // Validar que el monto de la puja sea mayor al monto actual
     const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
     if (bidAmount <= pujaActual) {
       throw new NotFoundException('El monto de la puja debe ser mayor al monto actual.');
     }
-
-    
+  
+    // Obtener el saldo del usuario
     const result = await this.userRepository.findOne({
       where: { email: email_user },
       select: ['balance'],
-      });
-
-  const remainingBalance = result.balance - bidAmount;
-    
-  // this.logger.debug(result.balance);
-  if (remainingBalance < pujaActual) {
-    throw new NotFoundException('El saldo es insuficiente');
-  }
+    });
+  
+    // Calcular el total comprometido en otras pujas activas
+    const totalCommitted = await this.pujaBidRepository
+      .createQueryBuilder('bids')
+      .innerJoin('bids.puja', 'puja')
+      .where('bids.email_user = :email', { email: email_user })
+      .andWhere('puja.fechaFin > :currentDate', { currentDate })
+      .select('SUM(bids.amount)', 'total')
+      .getRawOne();
+  
+    const committedAmount = parseFloat(totalCommitted.total || '0');
+    const remainingBalance = result.balance - committedAmount;
+  
+    // Validar el saldo disponible
+    if (remainingBalance < bidAmount) {
+      throw new NotFoundException(
+        `Saldo insuficiente. Saldo disponible: ${remainingBalance}, monto comprometido: ${committedAmount}, saldo total: ${result.balance}.`
+      );
+    }
+  
     // Verificar si el usuario ya realizó una puja para esta subasta
     const existingBid = await this.pujaBidRepository
       .createQueryBuilder('puja_bids')
       .innerJoin('users', 'users', 'puja_bids.userEmail = users.email')
       .innerJoin('puja', 'puja', 'puja_bids.pujaId = puja.id')
-      .where('users.email = "'+userId+'"')
-      .andWhere('puja.id = ' +pujaId+'')
+      .where('users.email = :userId', { userId })
+      .andWhere('puja.id = :pujaId', { pujaId })
       .select('puja_bids.*')
       .getRawOne();
-    // Verificar si el usuario ya realizó una puja
+  
+    let savedBid: PujaBid;
+  
     if (existingBid) {
-      
+      // Actualizar puja existente
       const updatedBid = this.pujaBidRepository.merge({
         id: existingBid.id,
         user,
         puja,
         iswinner,
         amount: bidAmount,
-        email_user: email_user,
-        fecha:currentDate
+        email_user,
+        fecha: currentDate,
+        is_auto,
+        max_auto_bid,
+        increment,
       });
-      // Guardar la puja actualizada en la base de datos
-      return await this.pujaBidRepository.save(updatedBid);
+  
+      savedBid = await this.pujaBidRepository.save(updatedBid);
     } else {
-      // Si el usuario no ha realizado una puja, creamos una nueva
-      const newBid = this.pujaBidRepository.create({ user, puja, amount: bidAmount, email_user,fecha:currentDate});
-      return await this.pujaBidRepository.save(newBid);
+      // Crear nueva puja
+      const newBid = this.pujaBidRepository.create({
+        user,
+        puja,
+        amount: bidAmount,
+        email_user,
+        fecha: currentDate,
+        is_auto,
+        max_auto_bid,
+        increment,
+      });
+  
+      savedBid = await this.pujaBidRepository.save(newBid);
+    }
+  
+    await this.handleAutoBids(bidAmount);
+  
+    return savedBid;
+  }
+  
+  private async handleAutoBids(bidAmount: number): Promise<void> {
+    const autoBids = await this.pujaBidRepository
+      .createQueryBuilder('b')
+      .innerJoinAndSelect('b.puja', 'p')
+      .innerJoinAndSelect('b.user', 'u')
+      .where('b.is_auto = :isAuto', { isAuto: true })
+      .andWhere('(b.max_auto_bid = 0 OR b.max_auto_bid > (b.increment + :incrementBalance))',{incrementBalance: bidAmount})
+      .andWhere('u.banned = :banned', { banned: false })
+      .getMany();
+  
+  
+    for (const bid of autoBids) {
+      const user = bid.user;
+  
+      const result = await this.userRepository.findOne({
+        where: { email: user.email },
+        select: ['balance'],
+      });
+  
+      const totalCommitted = await this.pujaBidRepository
+        .createQueryBuilder('bids')
+        .innerJoin('bids.puja', 'puja')
+        .where('bids.email_user = :email', { email: user.email })
+        .andWhere('puja.fechaFin > :currentDate', { currentDate: new Date() })
+        .select('SUM(bids.amount)', 'total')
+        .getRawOne();
+  
+      const committedAmount = parseFloat(totalCommitted.total || '0');
+      const remainingBalance = result.balance - committedAmount;
+  
+      const nextBidAmount = bid.amount + bid.increment;
+      if (remainingBalance < nextBidAmount) {
+        console.log(
+          `Auto-puja fallida para el usuario ${user.email}: saldo insuficiente. Saldo disponible: ${remainingBalance}, monto comprometido: ${committedAmount}, saldo total: ${result.balance}.`
+        );
+        continue;
+      }
+  
+      
+      await this.auto(bid);
     }
   }
+  
+  private async auto(pujaBid: PujaBid): Promise<PujaBid> {
+    const updatedBid = this.pujaBidRepository.merge({
+      id: pujaBid.id,
+      iswinner: false,
+      puja: pujaBid.puja,
+      user: pujaBid.user,
+      amount: pujaBid.amount + pujaBid.increment, 
+      email_user: pujaBid.email_user,
+      fecha: new Date(),
+      is_auto: pujaBid.is_auto,
+      max_auto_bid: pujaBid.max_auto_bid,
+      increment: pujaBid.increment,
+    });
+  
+    return await this.pujaBidRepository.save(updatedBid);
+  }
+  
 
   async getBidsByPuja(pujaId: number): Promise<PujaBid[]> {
     return this.pujaBidRepository.find({
@@ -528,14 +638,13 @@ export class PujaService {
       user: highestBid.user,
       amount: highestBid.amount,
       email_user: highestBid.email_user,
-      fecha: highestBid.fecha
+      fecha: highestBid.fecha,
+      is_auto: false,
+      max_auto_bid: 0,
+      increment: 0
     });
     return await this.pujaBidRepository.save(updatedBid);
   }
-  async auto(max:number, up:number){
-    return max;
-  }
-
 
   @Cron('59 * * * * *')
   async handleCron() {

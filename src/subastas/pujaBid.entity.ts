@@ -20,7 +20,12 @@ export class PujaBid {
 
   @Column()
   email_user: string;
-
-  @Column()
+  @Column({ default: false })
+  is_auto: boolean;
+  @Column({ default: 0 })
+  max_auto_bid: number;
+  @Column({ default: 0 })
+  increment: number;
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
   fecha: Date;
 }

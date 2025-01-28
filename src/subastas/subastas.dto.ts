@@ -53,7 +53,20 @@ export class MakeBidDto {
     email_user: string;
 
     @IsNotEmpty()
+    @IsBoolean()
+    is_auto: boolean;
+
+    @IsNotEmpty()
+    @IsNumber()
+    max_auto_bid: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    increment: number;
+
+    @IsOptional()
     @IsDate()
+    @Transform(({ value }) => new Date(value))
     fecha: Date;
   }
   export class UpdateBidDto {
@@ -79,6 +92,7 @@ export class MakeBidDto {
 
     @IsOptional()
     @IsDate()
+    @Transform(({ value }) => new Date(value))
     fecha?: Date;
   }
   export class UpdatePujaDto {
