@@ -2,7 +2,9 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as fs from 'fs';
+import { FirebaseService } from 'src/firebase/firebase_service';
 import { Image } from 'src/imagen/imagen.entity';
+import { Token } from 'src/notification/token.entity';
 import { User } from 'src/users/users.entity';
 import { Like, Not, Repository } from 'typeorm';
 import { PujaBid } from './pujaBid.entity';
@@ -20,10 +22,45 @@ export class PujaService {
     @InjectRepository(PujaBid) private readonly pujaBidRepository: Repository<PujaBid>,
     @InjectRepository(Image)
     private imagenRepository: Repository<Image>, 
+    private readonly firebaseService: FirebaseService, 
+    @InjectRepository(Token) private readonly tokenRepository: Repository<Token>,
+
   ) {}
   
   private readonly logger = new Logger(PujaService.name);
+  async sendNotificationToCreator(creatorId: string, pujaName: string) {
+    // Buscar el creador en la base de datos
+    const creator = await this.userRepository.findOne({ where: { email: creatorId } });
+    if (!creator) {
+      throw new NotFoundException('Creador no encontrado.');
+    }
 
+    // Obtener el primer token activo del creador
+    const activeToken = await this.tokenRepository.findOne({
+      where: { user: creator, loggedOutAt: null },
+      order: { createdAt: 'DESC' }, // Para obtener el token más reciente, si es necesario
+    });
+
+    if (!activeToken) {
+      throw new BadRequestException('Token de notificación no encontrado o el usuario está desconectado.');
+    }
+
+    // Crear el mensaje de notificación
+    const message = {
+      notification: {
+        title: 'Nueva Subasta Creada',
+        body: `La subasta "${pujaName}" ha sido creada con éxito.`,
+      },
+      token: activeToken.token, // Usamos el token activo
+    };
+
+    // Enviar la notificación
+    await this.firebaseService.sendNotification(
+      activeToken.token, // Usamos el token activo
+      message.notification.title, // Título de la notificación
+      message.notification.body, // Cuerpo de la notificación
+    );
+  }
   async createPuja(createPujaDto: CreatePujaDto): Promise<Puja> {
     const { creatorId, imagenes: imagenesUrls, ...pujaData } = createPujaDto;
   
@@ -31,6 +68,10 @@ export class PujaService {
     const creator = await this.userRepository.findOne({ where: { email: creatorId } });
     if (!creator) {
       throw new NotFoundException('Creador no encontrado.');
+    }
+    const existingPuja = await this.pujaRepository.findOne({ where: { nombre: pujaData.nombre } });
+    if (existingPuja) {
+        throw new BadRequestException('El nombre de la puja ya está en uso.');
     }
   
     // Crear la instancia de la puja
@@ -49,10 +90,10 @@ export class PujaService {
       imagen.puja = savedPuja;
       return imagen;
     });
-  
+    
     // Guardar las imágenes
     await this.imagenRepository.save(imagenes);
-  
+    await this.sendNotificationToCreator(creatorId, pujaData.nombre);
     return savedPuja;
   }
   
@@ -560,34 +601,34 @@ export class PujaService {
     });
   }
 
-  async pay(pujaId: number): Promise<string> {
-    // Obtener la puja
+  async processWinningBid(pujaId: number): Promise<string> {
     const puja = await this.pujaRepository.findOne({
         where: { id: pujaId },
-        relations: ['creator'], // Asegúrate de que se cargue el creador
+        relations: ['creator'],
     });
 
     if (!puja) {
         throw new NotFoundException('Puja no encontrada');
     }
 
-    // Obtener la puja actual (la más alta)
     const highestBid = await this.pujaBidRepository
-        .createQueryBuilder('bid')
-        .where('bid.pujaId = :pujaId', { pujaId })
-        .orderBy('bid.amount', 'DESC')
-        .getOne();
+        .createQueryBuilder('puja_bids')
+        .innerJoin('users', 'users', 'users.email = puja_bids.userEmail') 
+        .where('puja_bids.pujaId = :pujaId', { pujaId })
+        .andWhere('puja_bids.iswinner = false') 
+        .andWhere('users.banned = false') 
+        .orderBy('puja_bids.amount', 'DESC') 
+        .addOrderBy('puja_bids.fecha', 'ASC') 
+        .getOne(); 
 
     if (!highestBid) {
         throw new NotFoundException('No hay pujas para esta subasta.');
     }
 
-    // Obtener el creador de la puja
     let email = puja.creator.email;
     if (!email) {
         throw new NotFoundException('El creador no tiene un email válido.');
     }
-
 
     const creator = await this.userRepository.findOne({ where: { email } });
     if (!creator) {
@@ -600,51 +641,34 @@ export class PujaService {
         throw new NotFoundException('El postor no fue encontrado.');
     }
 
+    const updatedBid = this.pujaBidRepository.merge({
+        id: highestBid.id,
+        iswinner: true,
+        puja: highestBid.puja,
+        user: highestBid.user,
+        amount: highestBid.amount,
+        email_user: highestBid.email_user,
+        fecha: highestBid.fecha,
+        is_auto: false,
+        max_auto_bid: 0,
+        increment: 0
+    });
+    await this.pujaBidRepository.save(updatedBid);
+
     const currentBalance = Number(creator.balance || 0);
     const bidAmount = Number(highestBid.amount);
     let balance = currentBalance + bidAmount;
     
     const updatedCreator = this.userRepository.merge(creator, { balance });
-
-    // Actualizar el balance del creador en la base de datos
     await this.userRepository.save(updatedCreator);
+
     const currentBidder = Number(bidder.balance || 0);
-    
     balance = currentBidder - bidAmount;
     const updatedBidder = this.userRepository.merge(bidder, { balance });
-
-    // Actualizar el balance del creador en la base de datos
     await this.userRepository.save(updatedBidder);
 
     return `Se ha añadido ${highestBid.amount} al balance del creador ${creator.email}.`;
-  }
-
-  async win(pujaId: number): Promise<PujaBid> {
-    const highestBid = await this.pujaBidRepository
-      .createQueryBuilder('puja_bids')
-      .where('puja_bids.pujaId = :pujaId', { pujaId })
-      .orderBy('puja_bids.amount', 'DESC')
-      .addOrderBy('puja_bids.fecha', 'ASC')
-      .getOne();
-  
-    if (!highestBid) {
-      throw new NotFoundException('No hay pujas para esta subasta.');
-    }
-  
-    const updatedBid = this.pujaBidRepository.merge({
-      id: highestBid.id,
-      iswinner: true,
-      puja: highestBid.puja,
-      user: highestBid.user,
-      amount: highestBid.amount,
-      email_user: highestBid.email_user,
-      fecha: highestBid.fecha,
-      is_auto: false,
-      max_auto_bid: 0,
-      increment: 0
-    });
-    return await this.pujaBidRepository.save(updatedBid);
-  }
+}
 
   @Cron('59 * * * * *')
   async handleCron() {
@@ -662,10 +686,9 @@ export class PujaService {
     for (const resultado of resultados) {
       mesage+=resultado.id;
       const puja = await this.findOne(resultado.id); 
+      await this.processWinningBid(resultado.id);
       const updatedPuja = this.pujaRepository.merge(puja, {"open": false});
       await this.pujaRepository.save(updatedPuja);
-      this.win(resultado.id);
-      this.pay(resultado.id);
       }
     return resultados.map((resultado) => resultado.id);
     }

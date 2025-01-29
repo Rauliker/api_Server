@@ -4,7 +4,9 @@ import * as fs from 'fs';
 import { FirebaseService } from 'src/firebase/firebase_service';
 import { Localidad } from 'src/localidad/localidad.entity';
 import { Provincia } from 'src/provincia/provinvia.entity';
+import { Puja } from 'src/subastas/subastas.entity';
 import { Not, Repository } from 'typeorm';
+import { Token } from '../notification/token.entity';
 import { CreateUserDto, UpdateUserDto } from './user.dto';
 import { User } from './users.entity';
 
@@ -18,6 +20,11 @@ export class UserService {
       
       @InjectRepository(Provincia)
       private readonly provinciaRepository: Repository<Provincia>,
+      @InjectRepository(Puja)
+      private readonly subastaRepository: Repository<Puja>,
+
+      @InjectRepository(Token)
+      private readonly tokenRepository: Repository<Token>,
     private readonly firebaseService: FirebaseService, 
   ) {}
 
@@ -91,27 +98,126 @@ export class UserService {
     return this.userRepository.save(user);
   }
 
-  async findAllExcpt(id:string): Promise<User[]> {
-    return this.userRepository.find({where:{email: Not(id)}, relations: ['provincia','localidad','createdPujas','pujaBids'] });
+  async findAllExcpt(id: string): Promise<User[]> {
+    const users = await this.userRepository.find({
+      where: { email: Not(id) },
+      relations: ['provincia', 'localidad', 'createdPujas', 'pujaBids'],
+    });
+    let newUsers = [];
+    for (const user of users) {
+      let balancePujas = 0;
+      if (user.pujaBids) {
+        for (const pujaBid of user.pujaBids) {
+          const puja = await this.subastaRepository.findOne({
+            where: { pujas: pujaBid },
+          });
+          if (puja && puja.fechaFin < new Date()) {
+            continue;
+          }
+          balancePujas += pujaBid.amount;
+        }
+      }
+      user.balance =user.balance - balancePujas;
+      newUsers.push(user);
+    }
+    return newUsers;
   }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.find({ relations: ['provincia','localidad','createdPujas','pujaBids'] });
+    const users= await this.userRepository.find({ relations: ['provincia','localidad','createdPujas','pujaBids'] });
+    
+    let newUsers = [];
+    for (const user of users) {
+      let balancePujas = 0;
+      if (user.pujaBids) {
+        for (const pujaBid of user.pujaBids) {
+          const puja = await this.subastaRepository.findOne({
+            where: { pujas: pujaBid },
+          });
+          if (puja && puja.fechaFin < new Date()) {
+            continue;
+          }
+          balancePujas += pujaBid.amount;
+        }
+      }
+      user.balance =user.balance - balancePujas;
+      newUsers.push(user);
+    }
+    return newUsers;
   }
 
   async findOne(email: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { email }, relations: ['provincia','localidad','createdPujas','pujaBids'] });
+    const user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['provincia', 'localidad', 'createdPujas', 'pujaBids', 'tokens'],
+    });
+  
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
     }
+  
+    const activeTokens = user.tokens.filter(token => !token.loggedOutAt);
+  
+    let balancePujas = 0;
+    if (user.pujaBids) {
+      for (const pujaBid of user.pujaBids) {
+        const puja = await this.subastaRepository.findOne({
+          where: { pujas: pujaBid },
+        });
+        if (puja && puja.fechaFin < new Date()) {
+          continue;
+        }
+        balancePujas += pujaBid.amount;
+      }
+    }
+  
+    user.balance = user.balance - balancePujas;
+    user.balance = parseFloat(user.balance.toFixed(2));
+  
+    user.tokens = activeTokens;
+  
     return user;
   }
+  
 
-  async login(email: string, password: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { email, password, banned: false  }, relations: ['provincia','localidad','createdPujas','pujaBids'] });
+  async login(email: string, password: string, deviceInfo: string): Promise<User> {
+    let user = await this.userRepository.findOne({ where: { email, password, banned: false  }});
     if (!user) {
-      throw new NotFoundException('Credenciales incorrectas.');
+      throw new NotFoundException('Credenciales incorrectas.');     
     }
+    const firebase_login = await this.firebaseService.loginFirebaseUser(email, password);
+    if (!firebase_login) {
+      throw new BadRequestException('Error al iniciar sesión con Firebase');
+    }
+    const token = firebase_login.token;
+    const tokenRecord = this.tokenRepository.create({
+      user: user,
+      token: token,
+      deviceInfo: deviceInfo,
+      createdAt: new Date(),
+    });
+    await this.tokenRepository.save(tokenRecord);
+    user = await this.userRepository.findOne({ where: { email, password, banned: false  }, relations: ['provincia','localidad','createdPujas','pujaBids', 'tokens'] });
+    const activeTokens = user.tokens.filter(token => !token.loggedOutAt);
+  
+    let balancePujas = 0;
+    if (user.pujaBids) {
+      for (const pujaBid of user.pujaBids) {
+        const puja = await this.subastaRepository.findOne({
+          where: { pujas: pujaBid },
+        });
+        if (puja && puja.fechaFin < new Date()) {
+          continue;
+        }
+        balancePujas += pujaBid.amount;
+      }
+    }
+  
+    user.balance = user.balance - balancePujas;
+    user.balance = parseFloat(user.balance.toFixed(2));
+  
+    user.tokens = activeTokens;
+  
     return user;
   }
   async deleteUser(email: string): Promise<void> {
@@ -145,6 +251,21 @@ export class UserService {
 
     // Eliminar el usuario de la base de datos
     await this.userRepository.remove(user);
-}
-
+  }
+  async logout(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+  
+    // Buscar los tokens del usuario
+    const tokens = await this.tokenRepository.find({ where: { user: user } });
+  
+    // Actualizar los tokens para marcar el cierre de sesión
+    tokens.forEach(async (token) => {
+      token.loggedOutAt = new Date();
+      await this.tokenRepository.save(token);
+    });
+  }
+  
 }

@@ -127,12 +127,8 @@ export class PujaController {
   deletePuja(@Param('id') id: number) {
     return this.pujaService.deletePuja(id);
   }
-  @Get('pay/:id')
-  pagar(@Param('id') id: number) {
-    return this.pujaService.pay(id);
-  }
   @Get('win/:id')
-  ganador(@Param('id') id: number) {
-    return this.pujaService.win(id);
+  pagar(@Param('id') id: number) {
+    return this.pujaService.processWinningBid(id);
   }
 }

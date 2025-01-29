@@ -133,9 +133,14 @@ export class UserController {
     return this.userService.findOne(email);
   }
 
+  @Get('logout/:email')
+  logout(@Param('email') email: string) {
+    return this.userService.logout(email);
+  }
+
   @Post('login')
-  login(@Body() { email, password }: { email: string; password: string }) {
-    return this.userService.login(email, password);
+  login(@Body() { email, password, deviceInfo }: { email: string; password: string,deviceInfo:string }) {
+    return this.userService.login(email, password, deviceInfo);
   }
 
   @Delete(':email')

@@ -3,6 +3,7 @@ import { Provincia } from 'src/provincia/provinvia.entity';
 import { PujaBid } from 'src/subastas/pujaBid.entity';
 import { Puja } from 'src/subastas/subastas.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryColumn } from 'typeorm';
+import { Token } from '../notification/token.entity';
 
 @Entity('users')
 export class User {
@@ -43,4 +44,7 @@ export class User {
   
   @OneToMany(() => PujaBid, (pujaBid) => pujaBid.user)
   pujaBids: PujaBid[];
+
+  @OneToMany(() => Token, (token) => token.user)
+  tokens: Token[];
 }

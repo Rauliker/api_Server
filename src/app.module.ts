@@ -10,6 +10,7 @@ import { Image } from './imagen/imagen.entity';
 import { ImagenModule } from './imagen/imagen.module';
 import { Localidad } from './localidad/localidad.entity';
 import { LocalidadModule } from './localidad/localidad.module';
+import { Token } from './notification/token.entity';
 import { ProvinciaModule } from './provincia/privincia.module';
 import { Provincia } from './provincia/provinvia.entity';
 import { PujaBid } from './subastas/pujaBid.entity';
@@ -61,7 +62,8 @@ import { UtilsModule } from './utils/utils.module';
           User,
           Localidad,
           Provincia,
-          PujaBid
+          PujaBid,
+          Token
         ],
         synchronize: true,
       }),
