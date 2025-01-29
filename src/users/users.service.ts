@@ -180,7 +180,7 @@ export class UserService {
   }
   
 
-  async login(email: string, password: string, deviceInfo: string): Promise<User> {
+  async login(email: string, password: string, deviceInfo: string, fcmToken: string): Promise<User> {
     let user = await this.userRepository.findOne({ where: { email, password, banned: false  }});
     if (!user) {
       throw new NotFoundException('Credenciales incorrectas.');     
@@ -194,6 +194,7 @@ export class UserService {
       user: user,
       token: token,
       deviceInfo: deviceInfo,
+      fcmToken: fcmToken,
       createdAt: new Date(),
     });
     await this.tokenRepository.save(tokenRecord);

@@ -61,8 +61,6 @@ export class FirebaseService {
         data,
         token,
       };
-  
-      this.logger.debug('Enviando notificación:', JSON.stringify(message, null, 2));
       const response = await admin.messaging().send(message);
       console.log('Notificación enviada con éxito:', response);
     } catch (error) {

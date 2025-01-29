@@ -49,20 +49,20 @@ export class PujaService {
     // Enviar notificaciones a cada token de manera secuencial
     for (const tokenObj of activeTokens) {
       try {
-        if (!tokenObj.token || tokenObj.token.trim() === '') {
-          console.warn(`Token inválido encontrado: "${tokenObj.token}"`);
+        if (!tokenObj.fcmToken || tokenObj.fcmToken.trim() === '') {
+          console.warn(`Token inválido encontrado: "${tokenObj.fcmToken}"`);
           continue;
         }
   
         await this.firebaseService.sendNotification(
-          tokenObj.token,
+          tokenObj.fcmToken,
           'Nueva Subasta Creada',
           `La subasta "${pujaName}" ha sido creada con éxito.`
         );
   
-        console.log(`Notificación enviada a: ${tokenObj.token}`);
+        console.log(`Notificación enviada a: ${tokenObj.fcmToken}`);
       } catch (error) {
-        console.error(`Error al enviar notificación al token ${tokenObj.token}:`, error);
+        console.error(`Error al enviar notificación al token ${tokenObj.fcmToken}:`, error);
       }
     }
   

@@ -139,8 +139,8 @@ export class UserController {
   }
 
   @Post('login')
-  login(@Body() { email, password, deviceInfo }: { email: string; password: string,deviceInfo:string }) {
-    return this.userService.login(email, password, deviceInfo);
+  login(@Body() { email, password, deviceInfo, fcmToken }: { email: string; password: string, deviceInfo:string, fcmToken:string }) {
+    return this.userService.login(email, password, deviceInfo, fcmToken);
   }
 
   @Delete(':email')
