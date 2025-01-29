@@ -15,11 +15,14 @@ export class Token {
   token: string;
 
   @Column()
+  fcmToken: string;
+
+  @Column()
   deviceInfo: string; 
 
   @Column()
   createdAt: Date;
 
-  @Column({ nullable: true,  type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
+  @Column({ nullable: true,  type: 'timestamp'})
   loggedOutAt: Date;
 }

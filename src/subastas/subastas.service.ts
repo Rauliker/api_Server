@@ -34,33 +34,42 @@ export class PujaService {
     if (!creator) {
       throw new NotFoundException('Creador no encontrado.');
     }
-
-    // Obtener el primer token activo del creador
-    const activeToken = await this.tokenRepository.findOne({
+  
+    // Obtener todos los tokens activos del creador
+    const activeTokens = await this.tokenRepository.find({
       where: { user: creator, loggedOutAt: null },
-      order: { createdAt: 'DESC' }, // Para obtener el token más reciente, si es necesario
+      order: { createdAt: 'DESC' },
     });
-
-    if (!activeToken) {
-      throw new BadRequestException('Token de notificación no encontrado o el usuario está desconectado.');
+  
+    if (activeTokens.length === 0) {
+      console.warn(`No se encontraron tokens activos para el usuario ${creatorId}.`);
+      return;
     }
-
-    // Crear el mensaje de notificación
-    const message = {
-      notification: {
-        title: 'Nueva Subasta Creada',
-        body: `La subasta "${pujaName}" ha sido creada con éxito.`,
-      },
-      token: activeToken.token, // Usamos el token activo
-    };
-
-    // Enviar la notificación
-    await this.firebaseService.sendNotification(
-      activeToken.token, // Usamos el token activo
-      message.notification.title, // Título de la notificación
-      message.notification.body, // Cuerpo de la notificación
-    );
+  
+    // Enviar notificaciones a cada token de manera secuencial
+    for (const tokenObj of activeTokens) {
+      try {
+        if (!tokenObj.token || tokenObj.token.trim() === '') {
+          console.warn(`Token inválido encontrado: "${tokenObj.token}"`);
+          continue;
+        }
+  
+        await this.firebaseService.sendNotification(
+          tokenObj.token,
+          'Nueva Subasta Creada',
+          `La subasta "${pujaName}" ha sido creada con éxito.`
+        );
+  
+        console.log(`Notificación enviada a: ${tokenObj.token}`);
+      } catch (error) {
+        console.error(`Error al enviar notificación al token ${tokenObj.token}:`, error);
+      }
+    }
+  
+    console.log(`Notificaciones enviadas a ${activeTokens.length} dispositivos.`);
   }
+  
+  
   async createPuja(createPujaDto: CreatePujaDto): Promise<Puja> {
     const { creatorId, imagenes: imagenesUrls, ...pujaData } = createPujaDto;
   

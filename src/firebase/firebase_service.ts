@@ -49,6 +49,10 @@ export class FirebaseService {
     data: Record<string, any> = {},
   ): Promise<void> {
     try {
+      if (!token || token.trim() === '') {
+        throw new Error('Token de notificación inválido.');
+      }
+  
       const message = {
         notification: {
           title,
@@ -57,14 +61,21 @@ export class FirebaseService {
         data,
         token,
       };
-
+  
+      this.logger.debug('Enviando notificación:', JSON.stringify(message, null, 2));
       const response = await admin.messaging().send(message);
       console.log('Notificación enviada con éxito:', response);
     } catch (error) {
-      this.logger.debug('Error al enviar notificación:', error);
-      throw new Error('No se pudo enviar la notificación.');
-    }
+      if (error.code === 'messaging/invalid-registration-token') {
+        console.error('El token de notificación no es válido:', token);
+      } else if (error.code === 'messaging/registration-token-not-registered') {
+        console.error('El token ya no está registrado en FCM:', token);
+      } else {
+        console.error('Error desconocido al enviar la notificación:', error);
+      } 
+    } 
   }
+  
 
   async loginFirebaseUser(email: string, password: string) {
     try {
