@@ -180,7 +180,7 @@ export class UserService {
   }
   
 
-  async login(email: string, password: string, deviceInfo: string, fcmToken: string): Promise<User> {
+  async login(email: string, password: string, deviceInfo: string, fcmToken?: string): Promise<User> {
     let user = await this.userRepository.findOne({ where: { email, password, banned: false  }});
     if (!user) {
       throw new NotFoundException('Credenciales incorrectas.');     
@@ -253,20 +253,19 @@ export class UserService {
     // Eliminar el usuario de la base de datos
     await this.userRepository.remove(user);
   }
-  async logout(email: string): Promise<void> {
+  async logout(email: string, device: string): Promise<void> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
     }
   
     // Buscar los tokens del usuario
-    const tokens = await this.tokenRepository.find({ where: { user: user } });
+    const tokens = await this.tokenRepository.find({ where: { user: user, deviceInfo:device } });
   
-    // Actualizar los tokens para marcar el cierre de sesión
-    tokens.forEach(async (token) => {
-      token.loggedOutAt = new Date();
-      await this.tokenRepository.save(token);
-    });
+    // Borrar los tokens para marcar el cierre de sesión
+
+    await this.tokenRepository.remove(tokens);
+    
   }
   
 }

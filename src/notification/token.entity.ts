@@ -14,7 +14,7 @@ export class Token {
   @Column()
   token: string;
 
-  @Column()
+  @Column({nullable: true, })
   fcmToken: string;
 
   @Column()

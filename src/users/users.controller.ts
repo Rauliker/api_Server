@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import * as fs from 'fs';
 import { diskStorage } from 'multer';
@@ -134,12 +134,13 @@ export class UserController {
   }
 
   @Get('logout/:email')
-  logout(@Param('email') email: string) {
-    return this.userService.logout(email);
+  logout(@Param('email') email: string,
+    @Query('device') device?: string,) {
+    return this.userService.logout(email,device);
   }
 
   @Post('login')
-  login(@Body() { email, password, deviceInfo, fcmToken }: { email: string; password: string, deviceInfo:string, fcmToken:string }) {
+  login(@Body() { email, password, deviceInfo, fcmToken }: { email: string; password: string, deviceInfo:string, fcmToken?:string }) {
     return this.userService.login(email, password, deviceInfo, fcmToken);
   }
 
