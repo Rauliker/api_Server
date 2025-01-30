@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as fs from 'fs';
 import { FirebaseService } from 'src/firebase/firebase_service';
 import { Image } from 'src/imagen/imagen.entity';
+import { NotificationService } from 'src/notification/notification.service';
 import { Token } from 'src/notification/token.entity';
 import { User } from 'src/users/users.entity';
 import { Like, Not, Repository } from 'typeorm';
@@ -23,6 +24,7 @@ export class PujaService {
     @InjectRepository(Image)
     private imagenRepository: Repository<Image>, 
     private readonly firebaseService: FirebaseService, 
+    private readonly notificationService: NotificationService,
     @InjectRepository(Token) private readonly tokenRepository: Repository<Token>,
 
   ) {}
@@ -36,11 +38,11 @@ export class PujaService {
     }
   
     // Obtener todos los tokens activos del creador
-    const activeTokens = await this.tokenRepository.find({
-      where: { user: creator, loggedOutAt: null },
-      order: { createdAt: 'DESC' },
-    });
-  
+    const activeTokens = await this.tokenRepository
+      .createQueryBuilder('token')
+      .where('token.user_id = :userId', { userId: creatorId })
+      .andWhere('token.fcmToken IS NOT NULL')
+      .getMany();
     if (activeTokens.length === 0) {
       console.warn(`No se encontraron tokens activos para el usuario ${creatorId}.`);
       return;
@@ -538,7 +540,7 @@ export class PujaService {
     }
   
     await this.handleAutoBids(bidAmount);
-  
+    await this.notificationService.sendNotification(userId, puja.nombre, 'Puja Realizada', `Has realizado una puja de ${bidAmount} en la subasta ${puja.nombre}.`);
     return savedBid;
   }
   
@@ -676,8 +678,20 @@ export class PujaService {
     const updatedBidder = this.userRepository.merge(bidder, { balance });
     await this.userRepository.save(updatedBidder);
 
+    await this.notificationService.sendNotification(highestBid.email_user, puja.nombre, 'Subasta Ganadora', `Has ganado la subasta ${puja.nombre}`);
+
+    // Obtener a los postores que perdieron
+    const losingBidders = await this.pujaBidRepository.find({
+        where: { id:pujaId, iswinner: false },
+    });
+
+    for (const losingBid of losingBidders) {
+        await this.notificationService.sendNotification(losingBid.email_user, puja.nombre, 'Subasta Perdida', `No has ganado la subasta ${puja.nombre}. ¡Sigue participando!`);
+    }
+
     return `Se ha añadido ${highestBid.amount} al balance del creador ${creator.email}.`;
-}
+  }
+
 
   @Cron('59 * * * * *')
   async handleCron() {
@@ -697,6 +711,8 @@ export class PujaService {
       const puja = await this.findOne(resultado.id); 
       await this.processWinningBid(resultado.id);
       const updatedPuja = this.pujaRepository.merge(puja, {"open": false});
+      await this.notificationService.sendNotification(updatedPuja.creator.email, puja.nombre, 'Subasta Terminada', `Ha teminado esta subasta ${puja.nombre}`);
+
       await this.pujaRepository.save(updatedPuja);
       }
     return resultados.map((resultado) => resultado.id);

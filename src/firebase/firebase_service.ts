@@ -62,7 +62,7 @@ export class FirebaseService {
         token,
       };
       const response = await admin.messaging().send(message);
-      console.log('Notificación enviada con éxito:', response);
+      console.log('Notificación enviada con éxito:', message);
     } catch (error) {
       if (error.code === 'messaging/invalid-registration-token') {
         console.error('El token de notificación no es válido:', token);
