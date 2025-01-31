@@ -61,6 +61,7 @@ export class FirebaseService {
         data,
         token,
       };
+  
       const response = await admin.messaging().send(message);
       console.log('Notificación enviada con éxito:', message);
     } catch (error) {
@@ -70,9 +71,10 @@ export class FirebaseService {
         console.error('El token ya no está registrado en FCM:', token);
       } else {
         console.error('Error desconocido al enviar la notificación:', error);
-      } 
-    } 
+      }
+    }
   }
+  
   
 
   async loginFirebaseUser(email: string, password: string) {

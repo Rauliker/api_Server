@@ -37,6 +37,7 @@ export class NotificationService {
               tokenObj.fcmToken,
               title,
               body,
+              { "screen": "/my_sub" },
             );
       
             console.log(`Notificación enviada a: ${tokenObj.fcmToken}`);
