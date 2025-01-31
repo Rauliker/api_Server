@@ -30,46 +30,7 @@ export class PujaService {
   ) {}
   
   private readonly logger = new Logger(PujaService.name);
-  async sendNotificationToCreator(creatorId: string, pujaName: string) {
-    // Buscar el creador en la base de datos
-    const creator = await this.userRepository.findOne({ where: { email: creatorId } });
-    if (!creator) {
-      throw new NotFoundException('Creador no encontrado.');
-    }
   
-    // Obtener todos los tokens activos del creador
-    const activeTokens = await this.tokenRepository
-      .createQueryBuilder('token')
-      .where('token.user_id = :userId', { userId: creatorId })
-      .andWhere('token.fcmToken IS NOT NULL')
-      .getMany();
-    if (activeTokens.length === 0) {
-      console.warn(`No se encontraron tokens activos para el usuario ${creatorId}.`);
-      return;
-    }
-  
-    // Enviar notificaciones a cada token de manera secuencial
-    for (const tokenObj of activeTokens) {
-      try {
-        if (!tokenObj.fcmToken || tokenObj.fcmToken.trim() === '') {
-          console.warn(`Token inválido encontrado: "${tokenObj.fcmToken}"`);
-          continue;
-        }
-  
-        await this.firebaseService.sendNotification(
-          tokenObj.fcmToken,
-          'Nueva Subasta Creada',
-          `La subasta "${pujaName}" ha sido creada con éxito.`
-        );
-  
-        console.log(`Notificación enviada a: ${tokenObj.fcmToken}`);
-      } catch (error) {
-        console.error(`Error al enviar notificación al token ${tokenObj.fcmToken}:`, error);
-      }
-    }
-  
-    console.log(`Notificaciones enviadas a ${activeTokens.length} dispositivos.`);
-  }
   
   
   async createPuja(createPujaDto: CreatePujaDto): Promise<Puja> {
@@ -104,7 +65,8 @@ export class PujaService {
     
     // Guardar las imágenes
     await this.imagenRepository.save(imagenes);
-    await this.sendNotificationToCreator(creatorId, pujaData.nombre);
+    await this.notificationService.sendNotification(creatorId,'Nueva Subasta Creada',
+          `La subasta "${pujaData.nombre}" ha sido creada con éxito.`);
     return savedPuja;
   }
   
@@ -540,7 +502,7 @@ export class PujaService {
     }
   
     await this.handleAutoBids(bidAmount);
-    await this.notificationService.sendNotification(userId, puja.nombre, 'Puja Realizada', `Has realizado una puja de ${bidAmount} en la subasta ${puja.nombre}.`);
+    await this.notificationService.sendNotification(userId, 'Puja Realizada', `Has realizado una puja de ${bidAmount} en la subasta ${puja.nombre}.`);
     return savedBid;
   }
   
@@ -633,7 +595,7 @@ export class PujaService {
         .getOne(); 
 
     if (!highestBid) {
-        throw new NotFoundException('No hay pujas para esta subasta.');
+        return "hola";
     }
 
     let email = puja.creator.email;
@@ -678,7 +640,7 @@ export class PujaService {
     const updatedBidder = this.userRepository.merge(bidder, { balance });
     await this.userRepository.save(updatedBidder);
 
-    await this.notificationService.sendNotification(highestBid.email_user, puja.nombre, 'Subasta Ganadora', `Has ganado la subasta ${puja.nombre}`);
+    await this.notificationService.sendNotification(highestBid.email_user, 'Subasta Ganadora', `Has ganado la subasta ${puja.nombre}`);
 
     // Obtener a los postores que perdieron
     const losingBidders = await this.pujaBidRepository.find({
@@ -686,7 +648,7 @@ export class PujaService {
     });
 
     for (const losingBid of losingBidders) {
-        await this.notificationService.sendNotification(losingBid.email_user, puja.nombre, 'Subasta Perdida', `No has ganado la subasta ${puja.nombre}. ¡Sigue participando!`);
+        await this.notificationService.sendNotification(losingBid.email_user, 'Subasta Perdida', `No has ganado la subasta ${puja.nombre}. ¡Sigue participando!`);
     }
 
     return `Se ha añadido ${highestBid.amount} al balance del creador ${creator.email}.`;
@@ -711,7 +673,7 @@ export class PujaService {
       const puja = await this.findOne(resultado.id); 
       await this.processWinningBid(resultado.id);
       const updatedPuja = this.pujaRepository.merge(puja, {"open": false});
-      await this.notificationService.sendNotification(updatedPuja.creator.email, puja.nombre, 'Subasta Terminada', `Ha teminado esta subasta ${puja.nombre}`);
+      await this.notificationService.sendNotification(updatedPuja.creator.email, 'Subasta Terminada', `Ha teminado esta subasta ${puja.nombre}`);
 
       await this.pujaRepository.save(updatedPuja);
       }

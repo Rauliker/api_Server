@@ -1,12 +1,13 @@
 import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import { NotificationService } from 'src/notification/notification.service';
 import { CreatePujaDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
 import { PujaService } from './subastas.service';
 
 @Controller('pujas')
 export class PujaController {
-  constructor(private readonly pujaService: PujaService) {}
+  constructor(private readonly pujaService: PujaService,private readonly notificationService: NotificationService) {}
 
   @Post()
   @UseInterceptors(
@@ -130,5 +131,10 @@ export class PujaController {
   @Get('win/:id')
   pagar(@Param('id') id: number) {
     return this.pujaService.processWinningBid(id);
+  }
+
+  @Get('notification/:id')
+  not(@Param('id') id: string) {
+    return this.notificationService.sendNotification(id,'prueba','prueba');
   }
 }

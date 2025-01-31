@@ -14,7 +14,7 @@ export class NotificationService {
         @InjectRepository(Token) private readonly tokenRepository: Repository<Token>,
     
       ) {}
-    async sendNotification(userID: string, pujaName: string, title:string, body:string) {
+    async sendNotification(userID: string, title:string, body:string) {
       
         const activeTokens = await this.tokenRepository
           .createQueryBuilder('token')
