@@ -32,6 +32,7 @@
         "@types/babel__core": "^7.20.5",
         "@types/babel__generator": "^7.6.8",
         "@types/babel__template": "^7.4.4",
+        "@types/jasmine": "^5.1.5",
         "bcryptjs": "^2.4.3",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.14.1",

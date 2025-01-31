@@ -512,14 +512,13 @@ export class PujaService {
       .innerJoinAndSelect('b.puja', 'p')
       .innerJoinAndSelect('b.user', 'u')
       .where('b.is_auto = :isAuto', { isAuto: true })
-      .andWhere('(b.max_auto_bid = 0 OR b.max_auto_bid > (b.increment + :incrementBalance))',{incrementBalance: bidAmount})
+      .andWhere('(b.max_auto_bid = 0 OR b.max_auto_bid >= (b.increment + :incrementBalance))',{incrementBalance: bidAmount})
       .andWhere('u.banned = :banned', { banned: false })
       .getMany();
-  
-  
+    
     for (const bid of autoBids) {
       const user = bid.user;
-  
+      
       const result = await this.userRepository.findOne({
         where: { email: user.email },
         select: ['balance'],
@@ -536,7 +535,7 @@ export class PujaService {
       const committedAmount = parseFloat(totalCommitted.total || '0');
       const remainingBalance = result.balance - committedAmount;
   
-      const nextBidAmount = bid.amount + bid.increment;
+      const nextBidAmount = bidAmount + bid.increment;
       if (remainingBalance < nextBidAmount) {
         console.log(
           `Auto-puja fallida para el usuario ${user.email}: saldo insuficiente. Saldo disponible: ${remainingBalance}, monto comprometido: ${committedAmount}, saldo total: ${result.balance}.`
@@ -545,25 +544,32 @@ export class PujaService {
       }
   
       
-      await this.auto(bid);
+      await this.auto(bid, bidAmount);
     }
   }
   
-  private async auto(pujaBid: PujaBid): Promise<PujaBid> {
+  private async auto(pujaBid: PujaBid, newAmount: number): Promise<PujaBid> {
+    const amount = parseFloat(newAmount.toString()); 
+    const increment = parseInt(pujaBid.increment.toString(), 10);
+
+    const totalAmount = amount + increment;
+
     const updatedBid = this.pujaBidRepository.merge({
       id: pujaBid.id,
       iswinner: false,
       puja: pujaBid.puja,
       user: pujaBid.user,
-      amount: pujaBid.amount + pujaBid.increment, 
+      amount: totalAmount, 
       email_user: pujaBid.email_user,
       fecha: new Date(),
       is_auto: pujaBid.is_auto,
       max_auto_bid: pujaBid.max_auto_bid,
       increment: pujaBid.increment,
     });
-  
-    return await this.pujaBidRepository.save(updatedBid);
+    const saveBid = await this.pujaBidRepository.save(updatedBid);
+    console.log('Puja guardada:', saveBid);  
+    return saveBid;
+
   }
   
 
