@@ -1,5 +1,5 @@
 {
-  "name": "raul-nestjs-api",
+  "name": "rul_api",
   "script": "npm i && npm run start:dev",
   "instances": "1",
   "env": {
