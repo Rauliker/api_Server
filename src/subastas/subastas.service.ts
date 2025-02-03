@@ -7,7 +7,7 @@ import { Image } from 'src/imagen/imagen.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { Token } from 'src/notification/token.entity';
 import { User } from 'src/users/users.entity';
-import { Like, Not, Repository } from 'typeorm';
+import { LessThanOrEqual, Like, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { PujaBid } from './pujaBid.entity';
 import { CreatePujaDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
 import { Puja } from './subastas.entity';
@@ -111,57 +111,63 @@ export class PujaService {
   }
 
   async getPujaByOtherUser(
-    userEmail: string,
-    search?: string,
-    open?: boolean,
-    min?: number,
-    max?: number,
-    fechaInsertada?: string,
-  ): Promise<any[]> {
-    const where: any[] = [{ creator: { email: Not(userEmail) } }];
-  
-    if (search) {
-      where.push({ nombre: Like(`%${search}%`) });
-      where.push({ descripcion: Like(`%${search}%`) });
-    }
-  
-    if (open) {
-      const searchConditions = where.map((condition) => ({
-        ...condition,
-        open: open,
-      }));
-      where.splice(0, where.length, ...searchConditions);
-    }
-  
-    const pujas = await this.pujaRepository.find({
-      where,
-      relations: ['creator', 'pujas', 'imagenes'],
-    });
-  
-    if (pujas.length === 0) {
-      throw new NotFoundException('6000');
-    }
-  
-    const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
-  
-    const pujasWithPujaActual = await Promise.all(
-      pujas.map(async (puja) => {
-        const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
-  
-        if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
-          return null;
-        }
-  
-        if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
-          return null;
-        }
-  
-        return { ...puja, pujaActual };
-      }),
+  userEmail: string,
+  search?: string,
+  open?: boolean,
+  min?: number,
+  max?: number,
+  fechaInsertada?: string,
+): Promise<any[]> {
+  const where = [];
+
+  // Excluir al usuario actual
+  where.push({ creator: { email: Not(userEmail) } });
+
+  // Filtrar por búsqueda en nombre y descripción
+  if (search) {
+    where.push(
+      { nombre: Like(`%${search}%`), creator: { email: Not(userEmail) } },
+      { descripcion: Like(`%${search}%`), creator: { email: Not(userEmail) } }
     );
-  
-    return pujasWithPujaActual.filter((puja) => puja !== null);
   }
+
+  // Filtrar por estado abierto
+  if (open !== undefined) {
+    where.forEach((condition) => (condition.open = open));
+  }
+
+  // Obtener las pujas con las relaciones necesarias
+  const pujas = await this.pujaRepository.find({
+    where,
+    relations: ['creator', 'pujas', 'imagenes'],
+  });
+
+  if (pujas.length === 0) {
+    throw new NotFoundException('6000');
+  }
+
+  const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
+
+  // Aplicar filtros adicionales (min, max, fecha)
+  const pujasWithPujaActual = await Promise.all(
+    pujas.map(async (puja) => {
+      const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+
+      if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
+        return null;
+      }
+
+      if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
+        return null;
+      }
+
+      return { ...puja, pujaActual };
+    })
+  );
+
+  return pujasWithPujaActual.filter((puja) => puja !== null);
+}
+
   
   async getPujasByUser(
     userEmail: string,
@@ -229,58 +235,70 @@ export class PujaService {
   }
 
   async findAll(
+    emailType?: 'my' | 'other',  // 'my' para las subastas del usuario, 'other' para las subastas de otros
+    userEmail?: string,  // El email del usuario actual
     search?: string,
-    open?: boolean,
+    open?: string,
     min?: number,
     max?: number,
     fechaInsertada?: string,
   ): Promise<any[]> {
-    const where = [];
-
+    const where: any = {}; // Cambiar de array a objeto para aplicar el AND correctamente
+    
+    // Filtrar por el tipo de creador (my/other)
+    if (emailType === 'my') {
+      where.creator = { email: userEmail };  // Solo las subastas creadas por el usuario
+    } else if (emailType === 'other') {
+      where.creator = { email: Not(userEmail) };  // Solo las subastas de otros usuarios
+    }
+    
+    // Condición para filtrar por nombre o descripción si `search` está presente
     if (search) {
-      where.push({ nombre: Like(`%${search}%`) });
-      where.push({ descripcion: Like(`%${search}%`) });
+      where.nombre = Like(`%${search}%`);
     }
-
-    if (open) {
-      if (search) {
-        const searchConditions = where.map((condition) => {
-          const newCondition: Record<string, any> = {};
-          for (const key in condition) {
-            if (condition.hasOwnProperty(key)) {
-              newCondition[key] = condition[key];
-            }
-          }
-          newCondition.open = open;
-          return newCondition;
-        });
-
-        where.splice(0, where.length);
-        searchConditions.forEach((condition) => where.push(condition));
-      } else {
-        where.push({ open: open });
-      }
+  
+    // Si se pasa `open`, filtrar también por la propiedad `open`
+    const openBoolean = open === 'true' ? true : open === 'false' ? false : undefined;
+    if (openBoolean !== undefined) {
+      where.open = openBoolean;
     }
-
+  
+    // Si hay un rango de precios (min/max), aplicamos los filtros
+    if (min !== undefined) {
+      where.pujaInicial = MoreThanOrEqual(min);
+    }
+    
+    if (max !== undefined) {
+      where.pujaInicial = LessThanOrEqual(max);
+    }
+    
+    // Filtrar por la fecha de inserción si está presente
+    const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
+    if (fechaInsertadaDate) {
+      where.fechaFin = MoreThanOrEqual(fechaInsertadaDate);
+    }
+  
+    // Ejecutar la consulta con los filtros construidos
     const pujas = await this.pujaRepository.find({
-      where,
+      where, // Usar el objeto `where` para aplicar el AND
       relations: ['creator', 'imagenes', 'pujas'],
     });
-
-    const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
-
+  
+    // Obtener el valor de la puja actual y filtrarlo si es necesario
     const pujasWithPujaActual = await Promise.all(
       pujas.map(async (puja) => {
         const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
-
+  
+        // Filtrar las pujas según el valor de `min` y `max`
         if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
           return null;
         }
-
+  
+        // Filtrar las pujas que tienen una fecha de fin anterior a `fechaInsertada`
         if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
           return null;
         }
-
+  
         const pujaWithActual: Record<string, any> = {};
         for (const key in puja) {
           if (puja.hasOwnProperty(key)) {
@@ -291,11 +309,11 @@ export class PujaService {
         return pujaWithActual;
       }),
     );
-
+  
+    // Filtrar los valores nulos (aquellos que no cumplen con las condiciones)
     return pujasWithPujaActual.filter((puja) => puja !== null);
   }
-
-
+  
   async findOne(id: number): Promise<any> {
     const puja = await this.pujaRepository.findOne({
       where: { id },

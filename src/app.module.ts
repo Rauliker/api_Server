@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { MulterModule } from '@nestjs/platform-express';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -38,6 +39,10 @@ import { UtilsModule } from './utils/utils.module';
     ServeStaticModule.forRoot({
       rootPath: path.join(__dirname, '..', 'images'),  // Ruta donde se almacenan los archivos subidos
       serveRoot: '/images',  // Prefijo para acceder a los archivos estáticos
+    }),
+    JwtModule.register({
+      secret: 'mi_secreto_super_seguro', // Clave secreta para firmar el token
+      signOptions: { expiresIn: '24h' },  // Expira en 1 hora
     }),
     ConfigModule.forRoot(),
     ProvinciaModule,

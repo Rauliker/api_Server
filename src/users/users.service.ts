@@ -88,6 +88,19 @@ export class UserService {
     return this.userRepository.save(user);
   }
 
+  async banUser(updateEmail:string ,email: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+    const userUpdate = await this.userRepository.findOne({ where: { email:updateEmail } });
+    if (user.role >= userUpdate.role&&userUpdate.role!=2) {
+      throw new NotFoundException('no tienes rol suficiente.');
+    }
+    this.userRepository.merge(user, updateUserDto);
+    return this.userRepository.save(user);
+  }
+
   async updatePass(email: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {

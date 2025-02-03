@@ -11,7 +11,7 @@ export class PujaController {
 
   @Post()
   @UseInterceptors(
-    FilesInterceptor('files', 5, {
+    FilesInterceptor('files', 20, {
       storage: diskStorage({
         destination: './images', // Directorio donde se guardarán las imágenes
         filename: (req, file, callback) => {
@@ -31,15 +31,18 @@ export class PujaController {
 
   @Get()
   async findAllPujas(
+    @Query('type') type?: 'my' | 'other',
+    @Query('email') email?: string,
     @Query('search') search?: string,
-    @Query('open') open?: boolean, 
+    @Query('open') open?: string, 
     @Query('min') min?: number, 
     @Query('max') max?: number,
     @Query('date') date?: string, 
 
   ) {
     try {
-      return this.pujaService.findAll(search,open,min,max,date);
+      return this.pujaService.findAll(
+        type, email,search,open,min,max,date);
     } catch (err) {
       throw new HttpException(
         {
@@ -56,7 +59,7 @@ export class PujaController {
 
   @Put(':id')
   @UseInterceptors(
-    FilesInterceptor('files', 5, {
+    FilesInterceptor('files', 20, {
       storage: diskStorage({
         destination: './images', // Directorio donde se guardarán las imágenes
         filename: (req, file, callback) => {

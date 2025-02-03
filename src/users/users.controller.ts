@@ -119,6 +119,16 @@ export class UserController {
     }
   }
 
+  @Put('ban/:email/:updateEmail')
+  async banUser(
+    @Param('email') email: string,
+    @Param('updateEmail') updateEmail: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return await this.userService.banUser(updateEmail,email, updateUserDto);
+
+  }
+
   @Get()
   findAllUsers() {
     return this.userService.findAll();
