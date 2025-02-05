@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Localidad } from 'src/localidad/localidad.entity';
 import { User } from 'src/users/users.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
@@ -8,6 +9,8 @@ export class Provincia {
   id_provincia: number;
 
   @Column()
+  @ApiProperty({example: 'Valencia'})
+  
   nombre: string;
 
   @OneToMany(() => Localidad, (localidad) => localidad.provincia)

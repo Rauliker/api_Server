@@ -98,22 +98,12 @@ export class PujaController {
     return this.pujaService.findOne(id);
   }
   @Get('other/:id') 
-  findOtherPuja(@Param('id') id: string,
-  @Query('search') search?: string,
-  @Query('open') open?: boolean, 
-  @Query('min') min?: number, 
-  @Query('max') max?: number,
-  @Query('date') date?: string, ) {
-    return this.pujaService.getPujaByOtherUser(id,search,open,min,max,date);
+  findOtherPuja(@Param('id') id: string ) {
+    return this.pujaService.getPujaByOtherUser(id,);
   }
   @Get('my/:id') 
-  findMyPuja(@Param('id') id: string,
-  @Query('search') search?: string,
-  @Query('open') open?: boolean, 
-  @Query('min') min?: number, 
-  @Query('max') max?: number,
-  @Query('date') date?: string) {
-    return this.pujaService.getPujasByUser(id,search,open,min,max,date);
+  findMyPuja(@Param('id') id: string) {
+    return this.pujaService.getPujasByUser(id,);
   }
   @Post('bid')
   makeBid(@Body() makeBidDto: MakeBidDto) {

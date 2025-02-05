@@ -3,6 +3,7 @@ import * as bodyParser from 'body-parser';
 import { AppModule } from './app.module';
 //import { authorizationMiddleware } from './authorization.middleware';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { join } from 'path';
 
@@ -22,7 +23,13 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
-
+  const config = new DocumentBuilder()
+    .setTitle('API documentacio')
+    .setDescription('API descripcion')
+    .setVersion('1.0')
+    .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
   
   await app.listen(3000);
 }

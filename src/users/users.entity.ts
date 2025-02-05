@@ -25,7 +25,7 @@ export class User {
   @Column({ default: false })
   banned: boolean;
 
-  @Column({type: 'decimal', precision: 10, scale: 2,default: 0 })
+  @Column({default: 0 })
   balance?: number;
 
   @ManyToOne(() => Provincia, (provincia) => provincia.users)

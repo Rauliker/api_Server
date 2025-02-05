@@ -57,8 +57,12 @@ export class UserService {
       throw new BadRequestException('Error al crear el usuario en Firebase');
     }
     // Crear el usuario en la base de datos
-    const avatar = imagenesUrls.length > 0 ? imagenesUrls[imagenesUrls.length - 1] : null;
-
+    const avatar = imagenesUrls !=null ? imagenesUrls[imagenesUrls.length - 1] : "no";
+    
+    if (createUserDto.role > 2) {
+      createUserDto.role=2;
+    }
+    
   const user = this.userRepository.create({
     email: createUserDto.email,
     username: createUserDto.username,
@@ -82,24 +86,38 @@ export class UserService {
       throw new NotFoundException('Usuario no encontrado.');
     }
     if(updateUserDto.password!=null){
-    const firebaseUser = await this.firebaseService.updateFirebaseUser(updateUserDto.email, updateUserDto.password);}
-    
+    const firebaseUser = await this.firebaseService.updateFirebaseUser(email, updateUserDto.password);}
+    if(updateUserDto.role!=null||updateUserDto.role>2){
+      updateUserDto.role=2
+    }
     this.userRepository.merge(user, updateUserDto);
     return this.userRepository.save(user);
   }
 
-  async banUser(updateEmail:string ,email: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async banUser(updateEmail: string, email: string): Promise<User> {
+    // Buscar al usuario que está intentando hacer el cambio
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
     }
-    const userUpdate = await this.userRepository.findOne({ where: { email:updateEmail } });
-    if (user.role >= userUpdate.role&&userUpdate.role!=2) {
-      throw new NotFoundException('no tienes rol suficiente.');
+  
+    // Buscar al usuario que será baneado
+    const userUpdate = await this.userRepository.findOne({ where: { email: updateEmail } });
+    if (!userUpdate) {
+      throw new NotFoundException('Usuario a banear no encontrado.');
     }
-    this.userRepository.merge(user, updateUserDto);
-    return this.userRepository.save(user);
+  
+    // Verificar que el usuario tiene el rol suficiente para banear
+    if (user.role >= userUpdate.role && userUpdate.role !== 2) {
+      throw new NotFoundException('No tienes rol suficiente para banear a este usuario.');
+    }
+  
+    userUpdate.banned = !userUpdate.banned; 
+    await this.userRepository.save(userUpdate);  // Guardar los cambios en la base de datos
+  
+    return userUpdate;  // Retornar el usuario actualizado
   }
+  
 
   async updatePass(email: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.userRepository.findOne({ where: { email } });
