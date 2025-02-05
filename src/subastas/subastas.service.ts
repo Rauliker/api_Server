@@ -41,9 +41,9 @@ export class PujaService {
     if (!creator) {
       throw new NotFoundException('Creador no encontrado.');
     }
-    const existingPuja = await this.pujaRepository.findOne({ where: { nombre: pujaData.nombre } });
+    const existingPuja = await this.pujaRepository.findOne({ where: {creator: { email: creatorId }, nombre: pujaData.nombre } });
     if (existingPuja) {
-        throw new BadRequestException('El nombre de la puja ya está en uso.');
+        throw new BadRequestException('El nombre de la subasta ya está en uso.');
     }
   
     // Crear la instancia de la puja
