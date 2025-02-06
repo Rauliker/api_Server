@@ -96,10 +96,6 @@ export class MakeBidDto {
   @IsDecimal()
   bidAmount: number;
 
-  @ApiProperty({
-    description: 'Correo electrónico del usuario que realiza la puja',
-    example: 'user123@example.com',
-  })
   @IsNotEmpty()
   @IsString()
   email_user: string;

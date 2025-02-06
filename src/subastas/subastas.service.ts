@@ -472,7 +472,7 @@ export class PujaService {
   
     // Obtener el saldo del usuario
     const result = await this.userRepository.findOne({
-      where: { email: email_user },
+      where: { email: userId },
       select: ['balance'],
     });
   
@@ -480,7 +480,7 @@ export class PujaService {
     const totalCommitted = await this.pujaBidRepository
       .createQueryBuilder('bids')
       .innerJoin('bids.puja', 'puja')
-      .where('bids.email_user = :email', { email: email_user })
+      .where('bids.email_user = :email', { email: userId })
       .andWhere('puja.fechaFin > :currentDate', { currentDate })
       .select('SUM(bids.amount)', 'total')
       .getRawOne();
@@ -511,11 +511,11 @@ export class PujaService {
       // Actualizar puja existente
       const updatedBid = this.pujaBidRepository.merge({
         id: existingBid.id,
-        user,
+        user: user,
         puja,
         iswinner,
         amount: bidAmount,
-        email_user,
+        email_user:user.email,
         fecha: currentDate,
         is_auto,
         max_auto_bid,
@@ -526,10 +526,10 @@ export class PujaService {
     } else {
       // Crear nueva puja
       const newBid = this.pujaBidRepository.create({
-        user,
+        user:user,
         puja,
         amount: bidAmount,
-        email_user,
+        email_user:user.email,
         fecha: currentDate,
         is_auto,
         max_auto_bid,
