@@ -78,7 +78,10 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto {
-  @IsOptional()
+  @ApiProperty({
+    description: 'Correo electrónico del usuario',
+    example: 'usuario@ejemplo.com',
+  })
   @IsString()
   email?: string;
 

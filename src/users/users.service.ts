@@ -29,68 +29,161 @@ export class UserService {
   ) {}
 
   async createUser(createUserDto: CreateUserDto, imagenesUrls: string[]): Promise<User> {
-    const provincia = await this.provinciaRepository.findOne({
-      where: { id_provincia: createUserDto.provinciaId },
-    });
-    if (!provincia) {
-      throw new Error('Provincia no encontrada');
+    // Validar que el email no sea null ni vacío
+    if (!createUserDto.email || createUserDto.email.trim() === '') {
+      throw new BadRequestException('El email es obligatorio.');
     }
-    const localidad = await this.localidadRepository.findOne({
-      where: { id_localidad: createUserDto.localidadId },
-    });
-    if (!localidad) {
-      throw new Error('Localidad no encontrada');
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(createUserDto.email)) {
+      throw new BadRequestException('El email no tiene un formato válido.');
     }
+
+    // Validar que el nombre de usuario no sea null ni vacío
+    if (!createUserDto.username || createUserDto.username.trim() === '') {
+      throw new BadRequestException('El nombre de usuario es obligatorio.');
+    }
+
+    // Verificar si el usuario ya existe por email
     const userExists = await this.userRepository.findOne({ where: { email: createUserDto.email } });
     if (userExists) {
       throw new BadRequestException('El usuario ya existe.');
     }
 
-    const usernameExists = await this.userRepository.findOne({ where: { email: createUserDto.username } });
+    // Verificar si el usuario ya existe por nombre de usuario
+    const usernameExists = await this.userRepository.findOne({ where: { username: createUserDto.username } });
     if (usernameExists) {
       throw new BadRequestException('El nombre de usuario ya existe.');
     }
 
+    if (!createUserDto.calle || createUserDto.calle.trim() === '') {
+      throw new BadRequestException('La calle es obligatoria.');
+    }
+
+    // Validar provincia y localidad
+    const provincia = await this.provinciaRepository.findOne({
+      where: { id_provincia: createUserDto.provinciaId },
+    });
+
+    const localidad = await this.localidadRepository.findOne({
+      where: { id_localidad: createUserDto.localidadId },
+    });
+
+    if (!provincia) {
+      if (!localidad) {
+        throw new BadRequestException('Provincia y localidad no encontradas.');
+      } else {
+        createUserDto.provinciaId = localidad.provincia.id_provincia;
+      }
+    }
+
+    if (!localidad) {
+      throw new BadRequestException('Localidad no encontrada.');
+    }
+
+    // Validar contraseña
+    if (!createUserDto.password || createUserDto.password.length < 6) {
+      throw new BadRequestException('La contraseña debe tener al menos 6 caracteres.');
+    }
+
+    // Validar y corregir el rol si es mayor a 2
+    if (createUserDto.role > 2) {
+      createUserDto.role = 2;
+    }
+
     // Crear el usuario en Firebase
-    const firebaseUser = await this.firebaseService.createFirebaseUser(createUserDto.email,createUserDto.banned, createUserDto.password);
+    const firebaseUser = await this.firebaseService.createFirebaseUser(
+      createUserDto.email,
+      createUserDto.banned,
+      createUserDto.password
+    );
     if (!firebaseUser) {
       throw new BadRequestException('Error al crear el usuario en Firebase');
     }
-    // Crear el usuario en la base de datos
-    const avatar = imagenesUrls !=null ? imagenesUrls[imagenesUrls.length - 1] : "no";
-    
-    if (createUserDto.role > 2) {
-      createUserDto.role=2;
-    }
-    
-  const user = this.userRepository.create({
-    email: createUserDto.email,
-    username: createUserDto.username,
-    password: createUserDto.password,
-    avatar: avatar,
-    role: createUserDto.role,
-    banned: createUserDto.banned,
-    balance: createUserDto.balance,
-    calle: createUserDto.calle,
-    provincia,
-    localidad,
-  });
 
-  return this.userRepository.save(user);
+    // Obtener el avatar (última imagen o un valor por defecto)
+    const avatar = imagenesUrls && imagenesUrls.length > 0 ? imagenesUrls[imagenesUrls.length - 1] : 'no';
 
+    // Crear y guardar el usuario en la base de datos
+    const user = this.userRepository.create({
+      email: createUserDto.email,
+      username: createUserDto.username,
+      password: createUserDto.password,
+      avatar: avatar,
+      role: createUserDto.role,
+      banned: createUserDto.banned,
+      balance: createUserDto.balance,
+      calle: createUserDto.calle,
+      provincia,
+      localidad,
+    });
+
+    return this.userRepository.save(user);
   }
 
   async updateUser(email: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const userEdit = await this.userRepository.findOne({ where: { email } });
+    if (!userEdit) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    // Buscar al usuario por email
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
     }
-    if(updateUserDto.password!=null){
-    const firebaseUser = await this.firebaseService.updateFirebaseUser(email, updateUserDto.password);}
-    if(updateUserDto.role!=null||updateUserDto.role>2){
-      updateUserDto.role=2
+
+    // Evitar que el email sea modificado
+    if (updateUserDto.email && updateUserDto.email !== email) {
+      throw new BadRequestException('No puedes cambiar el email.');
     }
-    this.userRepository.merge(user, updateUserDto);
+
+    // Si se proporciona una contraseña, actualizarla en Firebase
+    if (updateUserDto.password) {
+      await this.firebaseService.updateFirebaseUser(email, updateUserDto.password);
+    }
+
+    // Validaciones antes de aplicar `merge`
+    const updatedData: Partial<User> = {};
+
+    if (updateUserDto.username !== null) {
+      updatedData.username = updateUserDto.username;
+    }
+    if (updateUserDto.avatar !== null) {
+      updatedData.avatar = updateUserDto.avatar;
+    }
+    if (updateUserDto.role !== null) {
+      if (userEdit.role > 2) {
+        updatedData.role = 2;
+      } else if (userEdit.role <= updateUserDto.role) {
+        updatedData.role = updateUserDto.role; 
+      } else {
+        updatedData.role = userEdit.role;
+      }
+    }
+    if (updateUserDto.banned !== null) {
+      updatedData.banned = updateUserDto.banned;
+    }
+    if (updateUserDto.balance !== null) {
+      updatedData.balance = updateUserDto.balance;
+    }
+    if (updateUserDto.calle !== null) {
+      updatedData.calle = updateUserDto.calle;
+    }
+
+    if (updateUserDto.localidadId !== null) {
+      const localidad = await this.localidadRepository.findOne({ where: { id_localidad: updateUserDto.localidadId } });
+      if (localidad) {
+        
+        updatedData.provincia = localidad.provincia;
+        updatedData.localidad = localidad;
+      }
+    }
+
+    // Usar merge para actualizar solo los campos permitidos
+    this.userRepository.merge(user, updatedData);
+
     return this.userRepository.save(user);
   }
 
