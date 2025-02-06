@@ -380,17 +380,37 @@ export class PujaService {
   
   
   async updatePuja(id: number, updatePujaDto: UpdatePujaDto) {
-    
-    const puja = await this.findOne(id );
-    
-    const {imagenes: imagenesUrls, ...pujaData } = updatePujaDto;
-    
+    const puja = await this.findOne(id);
+    const { imagenes: imagenesUrls, ...pujaData } = updatePujaDto;
+  
     if (!puja) {
       throw new Error('Puja no encontrada');
     }
+  
+    // Verificar si el nombre de la subasta ha cambiado
+    if (pujaData.nombre && pujaData.nombre !== puja.nombre) {
+      // Obtener las imágenes asociadas a la puja
+      const imagenes = await this.imagenRepository.find({ where: { puja: { id } } });
+  
+      // Cambiar el nombre de las imágenes
+      for (const imagen of imagenes) {
+        const oldPath = `.${imagen.url}`;
+        const newPath = `.${imagen.url.replace(puja.nombre, pujaData.nombre)}`;
+  
+        // Renombrar el archivo en el sistema de archivos
+        if (fs.existsSync(oldPath)) {
+          fs.renameSync(oldPath, newPath);
+        }
+  
+        // Actualizar la URL de la imagen en la base de datos
+        imagen.url = imagen.url.replace(puja.nombre, pujaData.nombre);
+        await this.imagenRepository.save(imagen);
+      }
+    }
+  
     Object.assign(puja, pujaData);
     const savedPuja = await this.pujaRepository.save(puja);
-    // Actualizar imágenes
+  
     if (imagenesUrls && imagenesUrls.length) {
       const newImages = imagenesUrls.map((url) => {
         const imagen = new Image();
@@ -399,9 +419,9 @@ export class PujaService {
         return imagen;
       });
       await this.imagenRepository.save(newImages);
-    }    
-    return puja;
-
+    }
+  
+    return savedPuja;
   }
 
   async makeBid(makeBidDto: MakeBidDto): Promise<PujaBid> {
