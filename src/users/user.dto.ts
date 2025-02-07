@@ -112,11 +112,6 @@ export class UpdateUserDto {
   @IsString()
   avatar?: string;
 
-  @ApiProperty({
-    description: 'Rol del usuario (opcional)',
-    example: "2",
-    required: false,
-  })
   @IsOptional()
   @Transform(({ value }) => {
     const role = typeof value === 'string' ? parseInt(value, 10) : value;

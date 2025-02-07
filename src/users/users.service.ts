@@ -28,7 +28,7 @@ export class UserService {
     private readonly firebaseService: FirebaseService, 
   ) {}
 
-  async createUser(createUserDto: CreateUserDto, imagenesUrls: string[]): Promise<User> {
+  async createUser(createUserDto: CreateUserDto, imagenesUrls: string[], emailInfo: string | null = null): Promise<User> {
     // Validar que el email no sea null ni vacío
     if (!createUserDto.email || createUserDto.email.trim() === '') {
       throw new BadRequestException('El email es obligatorio.');
@@ -89,7 +89,10 @@ export class UserService {
 
     // Validar y corregir el rol si es mayor a 2
     if (createUserDto.role > 2) {
-      createUserDto.role = 2;
+      const emilInfoUser = await this.userRepository.findOne({ where: { email: emailInfo } });
+      if(emailInfo==null || emilInfoUser.role > createUserDto.role){
+        createUserDto.role =2;
+      }
     }
 
     // Crear el usuario en Firebase
@@ -123,10 +126,6 @@ export class UserService {
   }
 
   async updateUser(email: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const userEdit = await this.userRepository.findOne({ where: { email } });
-    if (!userEdit) {
-      throw new NotFoundException('Usuario no encontrado.');
-    }
 
     // Buscar al usuario por email
     const user = await this.userRepository.findOne({ where: { email } });
@@ -152,15 +151,6 @@ export class UserService {
     }
     if (updateUserDto.avatar !== null) {
       updatedData.avatar = updateUserDto.avatar;
-    }
-    if (updateUserDto.role !== null) {
-      if (userEdit.role > 2) {
-        updatedData.role = 2;
-      } else if (userEdit.role <= updateUserDto.role) {
-        updatedData.role = updateUserDto.role; 
-      } else {
-        updatedData.role = userEdit.role;
-      }
     }
     if (updateUserDto.banned !== null) {
       updatedData.banned = updateUserDto.banned;

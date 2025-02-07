@@ -35,9 +35,11 @@ export class UserController {
   async createUser(
     @Body() createUserDto: CreateUserDto,
     @UploadedFiles() files: Express.Multer.File[],
+    
+    @Query('email') emailInfo: string | null = null,
   ) {
     if (!files || files.length === 0) {
-      return await this.userService.createUser(createUserDto, null);
+      return await this.userService.createUser(createUserDto, null, emailInfo);
     }
   
     const tempFilePaths = files?.map((file) => file.path) || [];
@@ -46,7 +48,7 @@ export class UserController {
       const imagenesUrls = files.map(
         (file) => `/images/avatar/${file.filename}`,
       );
-      const user = await this.userService.createUser(createUserDto, imagenesUrls);
+      const user = await this.userService.createUser(createUserDto, imagenesUrls, emailInfo);
   
       tempFilePaths.forEach((tempPath) => {
         const finalPath = path.join('./images/avatar', path.basename(tempPath));
