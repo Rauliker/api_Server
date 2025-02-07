@@ -255,6 +255,7 @@ export class PujaService {
     // Condición para filtrar por nombre o descripción si `search` está presente
     if (search) {
       where.nombre = Like(`%${search}%`);
+      where.descripcion = Like(`%${search}%`);
     }
   
     // Si se pasa `open`, filtrar también por la propiedad `open`

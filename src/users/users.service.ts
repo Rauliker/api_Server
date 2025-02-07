@@ -345,14 +345,21 @@ export class UserService {
   
     return user;
   }
-  async deleteUser(email: string): Promise<void> {
+  async deleteUser(email: string, emailDeleter: string): Promise<void> {
     // Buscar el usuario en la base de datos
+    const deleter = await this.userRepository.findOne({ where: { email: emailDeleter } });
+    if (!deleter) {
+        throw new NotFoundException('Usuario no encontrado.');
+    }
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
         throw new NotFoundException('Usuario no encontrado.');
     }
+    if (deleter.role<=user.role) {
+      throw new BadRequestException('No tienes los permisis suficiente');
+    }
 
-    if (user.avatar) {
+    if (user.avatar!="no") {
         const filePath = `.${user.avatar}`;
         try {
             if (fs.existsSync(filePath)) {

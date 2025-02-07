@@ -184,11 +184,11 @@ export class UserController {
     );
 }
 
-  @Delete(':email')
+  @Delete(':email/:emailDeleter')
   @ApiOperation({ summary: 'Delete a user by email' })
   @ApiResponse({ status: 200, description: 'User deleted successfully.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  delete(@Param('email') email: string) {
-    return this.userService.deleteUser(email);
+  delete(@Param('email') email: string, @Param('emailDeleter') emailDeleterd: string) {
+    return this.userService.deleteUser(email,emailDeleterd);
   }
 }
