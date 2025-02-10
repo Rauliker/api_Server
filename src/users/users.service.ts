@@ -191,9 +191,11 @@ export class UserService {
     }
   
     // Verificar que el usuario tiene el rol suficiente para banear
-    if (user.role >= userUpdate.role && userUpdate.role !== 2) {
+    if (user.role >= userUpdate.role || user.role == 2) {
+      console.log(userUpdate.role)
       throw new NotFoundException('No tienes rol suficiente para banear a este usuario.');
     }
+    
   
     userUpdate.banned = !userUpdate.banned; 
     await this.userRepository.save(userUpdate);  // Guardar los cambios en la base de datos

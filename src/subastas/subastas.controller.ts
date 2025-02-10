@@ -126,20 +126,6 @@ export class PujaController {
     return this.pujaService.findOne(id);
   }
 
-  @Get('other/:id')
-  @ApiOperation({ summary: 'Obtener puja de otro usuario' })
-  @ApiParam({ name: 'id', description: 'ID del usuario' })
-  findOtherPuja(@Param('id') id: string) {
-    return this.pujaService.getPujaByOtherUser(id);
-  }
-
-  @Get('my/:id')
-  @ApiOperation({ summary: 'Obtener puja de un usuario específico' })
-  @ApiParam({ name: 'id', description: 'ID del usuario' })
-  findMyPuja(@Param('id') id: string) {
-    return this.pujaService.getPujasByUser(id);
-  }
-
   @Post('bid')
   @ApiOperation({ summary: 'Realizar una puja' })
   @ApiBody({ type: MakeBidDto })

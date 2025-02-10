@@ -133,7 +133,7 @@ export class UserController {
   }
   
 
-  @Put('ban/:email/:updateEmail')
+  @Put('ban/:updateEmail/:email')
   @ApiOperation({ summary: 'Ban a user' })
   @ApiResponse({ status: 200, description: 'User banned successfully.' })
   @ApiResponse({ status: 400, description: 'Bad request.' })

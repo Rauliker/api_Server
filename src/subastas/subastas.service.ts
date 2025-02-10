@@ -7,7 +7,7 @@ import { Image } from 'src/imagen/imagen.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { Token } from 'src/notification/token.entity';
 import { User } from 'src/users/users.entity';
-import { LessThanOrEqual, Like, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { Like, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { PujaBid } from './pujaBid.entity';
 import { CreatePujaDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
 import { Puja } from './subastas.entity';
@@ -235,85 +235,56 @@ export class PujaService {
   }
 
   async findAll(
-    emailType?: 'my' | 'other',  // 'my' para las subastas del usuario, 'other' para las subastas de otros
-    userEmail?: string,  // El email del usuario actual
+    emailType?: 'my' | 'other',
+    userEmail?: string,
     search?: string,
     open?: string,
     min?: number,
     max?: number,
-    fechaInsertada?: string,
+    fechaInsertada?: string
   ): Promise<any[]> {
-    const where: any = {}; // Cambiar de array a objeto para aplicar el AND correctamente
-    
-    // Filtrar por el tipo de creador (my/other)
+    const where: any = {};
+  
     if (emailType === 'my') {
-      where.creator = { email: userEmail };  // Solo las subastas creadas por el usuario
+      where.creator = { email: userEmail };
     } else if (emailType === 'other') {
-      where.creator = { email: Not(userEmail) };  // Solo las subastas de otros usuarios
-    }
-    
-    // Condición para filtrar por nombre o descripción si `search` está presente
-    if (search) {
-      where.nombre = Like(`%${search}%`);
-      where.descripcion = Like(`%${search}%`);
+      where.creator = { email: Not(userEmail) };
     }
   
-    // Si se pasa `open`, filtrar también por la propiedad `open`
+    if (search) {
+      where.nombre = Like(`%${search}%`);
+      // where.descripcion = Like(`%${search}%`);
+    }
+  
     const openBoolean = open === 'true' ? true : open === 'false' ? false : undefined;
     if (openBoolean !== undefined) {
       where.open = openBoolean;
     }
   
-    // Si hay un rango de precios (min/max), aplicamos los filtros
-    if (min !== undefined) {
-      where.pujaInicial = MoreThanOrEqual(min);
-    }
-    
-    if (max !== undefined) {
-      where.pujaInicial = LessThanOrEqual(max);
-    }
-    
-    // Filtrar por la fecha de inserción si está presente
-    const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
-    if (fechaInsertadaDate) {
-      where.fechaFin = MoreThanOrEqual(fechaInsertadaDate);
+    if (fechaInsertada) {
+      where.fechaFin = MoreThanOrEqual(new Date(fechaInsertada));
     }
   
-    // Ejecutar la consulta con los filtros construidos
     const pujas = await this.pujaRepository.find({
-      where, // Usar el objeto `where` para aplicar el AND
+      where,
       relations: ['creator', 'imagenes', 'pujas'],
     });
   
-    // Obtener el valor de la puja actual y filtrarlo si es necesario
     const pujasWithPujaActual = await Promise.all(
       pujas.map(async (puja) => {
         const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
   
-        // Filtrar las pujas según el valor de `min` y `max`
         if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
           return null;
         }
   
-        // Filtrar las pujas que tienen una fecha de fin anterior a `fechaInsertada`
-        if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
-          return null;
-        }
-  
-        const pujaWithActual: Record<string, any> = {};
-        for (const key in puja) {
-          if (puja.hasOwnProperty(key)) {
-            pujaWithActual[key] = puja[key];
-          }
-        }
-        pujaWithActual.pujaActual = pujaActual;
-        return pujaWithActual;
-      }),
+        return { ...puja, pujaActual };
+      })
     );
   
-    // Filtrar los valores nulos (aquellos que no cumplen con las condiciones)
     return pujasWithPujaActual.filter((puja) => puja !== null);
   }
+  
   
   async findOne(id: number): Promise<any> {
     const puja = await this.pujaRepository.findOne({
@@ -540,19 +511,20 @@ export class PujaService {
       savedBid = await this.pujaBidRepository.save(newBid);
     }
   
-    await this.handleAutoBids(bidAmount);
+    await this.handleAutoBids(bidAmount,user.email);
     await this.notificationService.sendNotification(userId, 'Puja Realizada', `Has realizado una puja de ${bidAmount} en la subasta ${puja.nombre}.`);
     return savedBid;
   }
   
-  private async handleAutoBids(bidAmount: number): Promise<void> {
+  private async handleAutoBids(bidAmount: number, email: string): Promise<void> {
     const autoBids = await this.pujaBidRepository
       .createQueryBuilder('b')
       .innerJoinAndSelect('b.puja', 'p')
       .innerJoinAndSelect('b.user', 'u')
       .where('b.is_auto = :isAuto', { isAuto: true })
-      .andWhere('(b.max_auto_bid = 0 OR b.max_auto_bid >= (b.increment + :incrementBalance))',{incrementBalance: bidAmount})
+      .andWhere('(b.max_auto_bid = 0 OR b.max_auto_bid >= (b.increment + :incrementBalance))', { incrementBalance: 120 })
       .andWhere('u.banned = :banned', { banned: false })
+      .andWhere('u.email != :excludedEmail', { excludedEmail: 'a123456@gmail.com' })
       .getMany();
     
     for (const bid of autoBids) {
