@@ -1,6 +1,6 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Logger, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { diskStorage } from 'multer';
 import * as path from 'path';
@@ -12,6 +12,7 @@ import { UserService } from './users.service';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+    logger = new Logger(UserService.name);
   @UseInterceptors(
     FilesInterceptor('files', 1, {
       storage: diskStorage({
@@ -26,9 +27,15 @@ export class UserController {
           }
         },
       }),
+      fileFilter: (req, file, callback) => {
+        if (file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+        callback(null, true);
+        }
+      },
     }),
   )
   @Post()
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: 201, description: 'User created successfully.', type: CreateUserDto })
   @ApiResponse({ status: 400, description: 'Bad request.' })
@@ -66,33 +73,41 @@ export class UserController {
     }
   }
   
-
+  
+  @Put(':email')
   @UseInterceptors(
     FilesInterceptor('files', 1, {
       storage: diskStorage({
         destination: './temp',
         filename: (req, file, callback) => {
-          const email = req.params?.email;
-          if (!email) {
-            callback(new BadRequestException('Email is required'), null);
-          } else {
+          let email = req.params.email;
+          if (email) {
             const filename = `${email}-avatar${path.extname(file.originalname)}`;
-            callback(null, filename);
+            callback(null, filename); 
           }
         },
       }),
+      fileFilter: (req, file, callback) => {
+        if (file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+        callback(null, true);
+        }
+      },
     }),
   )
-  @Put(':email')
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update an existing user' })
   @ApiResponse({ status: 200, description: 'User updated successfully.', type: UpdateUserDto })
   @ApiResponse({ status: 400, description: 'Bad request.' })
   async updateUser(
     @Param('email') email: string,
-    @Body() updateUserDto: UpdateUserDto,
     @UploadedFiles() files: Express.Multer.File[],
+    @Body() updateUserDto: UpdateUserDto,
   ) {
-    const existingUser = await this.userService.findOne(email);
+    if(email!=updateUserDto.email){
+      
+      throw new BadRequestException('Emails no coinciden');
+    }
+    const existingUser = await this.userService.findOne(updateUserDto.email);
     if (!existingUser) {
       throw new BadRequestException('User not found');
     }
@@ -106,7 +121,7 @@ export class UserController {
           (file) => `/images/avatar/${file.filename}`,
         );
   
-        const oldImagePath = `./images/avatar/${email}-avatar${path.extname(existingUser.avatar || '')}`;
+        const oldImagePath = `./images/avatar/${updateUserDto.email}-avatar${path.extname(existingUser.avatar || '')}`;
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
         }
@@ -120,7 +135,7 @@ export class UserController {
         updateUserDto.avatar = imagenesUrls[0]; // Asignar la nueva URL de la imagen
       }
   
-      return await this.userService.updateUser(email, updateUserDto);
+      return await this.userService.updateUser(updateUserDto.email, updateUserDto);
     } catch (error) {
       // Eliminar los archivos temporales en caso de error
       tempFilePaths.forEach((tempPath) => {

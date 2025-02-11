@@ -11,11 +11,6 @@ export class CreatePujaDto {
   @IsString()
   nombre: string;
 
-  @ApiProperty({
-    description: 'Estado de la puja (abierta o cerrada)',
-    example: true,
-    required: false,
-  })
   @IsOptional()
   @IsBoolean()
   open?: boolean;
@@ -53,9 +48,10 @@ export class CreatePujaDto {
   @IsString()
   creatorId: string;
 
-  @ApiProperty({ type: [String], description: 'Imágenes asociadas a la puja',
-    example: [],
-    required: false, })
+  @ApiProperty({ description: 'Añadir imágenes', type: 'string', format: 'binary', required: false })
+  @IsOptional()
+  files?: any; 
+
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -202,11 +198,6 @@ export class UpdatePujaDto {
   @IsString()
   nombre?: string;
 
-  @ApiProperty({
-    description: 'Estado de la puja (opcional)',
-    example: true,
-    required: false,
-  })
   @IsOptional()
   @IsBoolean()
   open?: boolean;
@@ -229,21 +220,15 @@ export class UpdatePujaDto {
   @IsDecimal()
   pujaInicial?: number;
 
-  @ApiProperty({
-    description: 'Imágenes eliminadas de la puja (opcional)',
-    example: ['image1.jpg'],
-    required: false,
-  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   eliminatedImages?: string[];
-
-  @ApiProperty({
-    description: 'Imágenes relacionadas con la puja (opcional)',
-    example: ['image3.jpg', 'image4.jpg'],
-    required: false,
-  })
+  
+  @ApiProperty({ description: 'Añadir imágenes', type: 'string', format: 'binary', required: false })
+  @IsOptional()
+  files?: any; 
+  
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -258,4 +243,16 @@ export class UpdatePujaDto {
   @IsDate()
   @Transform(({ value }) => new Date(value))
   fechaFin?: Date;
+}
+
+export class DeleteImageDto {
+  @ApiProperty({
+    description: 'Rutas de las imágenes a eliminar',
+    example: ['images/imagen1.jpg', 'images/imagen2.jpg'],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  eliminatedImages?: string[];
 }

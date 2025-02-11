@@ -37,13 +37,10 @@ export class PujaService {
     const { creatorId, imagenes: imagenesUrls, ...pujaData } = createPujaDto;
   
     // Verificar que el creador existe
+    console.log('creatorId:', creatorId);
     const creator = await this.userRepository.findOne({ where: { email: creatorId } });
     if (!creator) {
       throw new NotFoundException('Creador no encontrado.');
-    }
-    const existingPuja = await this.pujaRepository.findOne({ where: {creator: { email: creatorId }, nombre: pujaData.nombre } });
-    if (existingPuja) {
-        throw new BadRequestException('El nombre de la subasta ya está en uso.');
     }
   
     // Crear la instancia de la puja
@@ -321,8 +318,7 @@ export class PujaService {
     if (!puja) {
       throw new NotFoundException('Puja no encontrada');
     }
-  
-    if (eliminatedImages && eliminatedImages.length) {
+    if (eliminatedImages && eliminatedImages.length&&(puja.imagenes.length-eliminatedImages.length)>=1) {
       for (const image of eliminatedImages) {
         const pujaImg = puja.imagenes.find((img) => img.url === image);
   
@@ -342,9 +338,8 @@ export class PujaService {
         }
       }
     } else {
-      throw new BadRequestException(
-        'No se proporcionaron imágenes para eliminar',
-      );
+      throw new NotFoundException('No puedes eliminar todas las imagenes');
+
     }
   
     return { message: 'Imágenes eliminadas con éxito', eliminatedImages };

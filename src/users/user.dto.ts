@@ -75,6 +75,15 @@ export class CreateUserDto {
   @IsNotEmpty()
   @IsString()
   calle: string;
+
+  @ApiProperty({
+    description: 'Añadir Imagenes',
+    items: { type: 'string', format: 'binary' },
+    required: false,
+  })
+  @ApiProperty({ description: 'Añadir imágenes', type: 'string', format: 'binary', required: false })
+  @IsOptional()
+  files?: any; 
 }
 
 export class UpdateUserDto {
@@ -103,11 +112,6 @@ export class UpdateUserDto {
   @IsString()
   password?: string;
 
-  @ApiProperty({
-    description: 'Avatar del usuario (opcional)',
-    example: 'https://example.com/nuevo_avatar.png',
-    required: false,
-  })
   @IsOptional()
   @IsString()
   avatar?: string;
@@ -120,13 +124,6 @@ export class UpdateUserDto {
   @IsNumber()
   role: number;
 
-  @ApiProperty({
-    description: 'Estado de baneo del usuario (opcional)',
-    example: false,
-    required: false,
-  })
-  @IsOptional()
-  @IsBoolean()
   banned?: boolean;
 
   @ApiProperty({
@@ -135,16 +132,22 @@ export class UpdateUserDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => (value === null || value === '' ? undefined : Number(value)))
   @IsNumber()
   @Min(0)
   balance?: number;
+
+  
 
   @ApiProperty({
     description: 'ID de la provincia asociada al usuario (opcional)',
     example: 2,
     required: false,
   })
+  
+
   @IsOptional()
+  @Transform(({ value }) => (value === null || value === '' ? undefined : Number(value)))
   @IsNumber()
   provinciaId?: number;
 
@@ -154,6 +157,7 @@ export class UpdateUserDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => (value === null || value === '' ? undefined : Number(value)))
   @IsNumber()
   localidadId?: number;
 
@@ -165,6 +169,15 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   calle?: string;
+
+  @ApiProperty({
+      description: 'Añadir Imagenes',
+      items: { type: 'string', format: 'binary' },
+      required: false,
+    })
+  @ApiProperty({ description: 'Añadir imágenes', type: 'string', format: 'binary', required: false })
+  @IsOptional()
+  files?: any; 
 }
 
 export class LoginDto {

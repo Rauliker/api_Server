@@ -128,13 +128,14 @@ export class UserService {
   async updateUser(email: string, updateUserDto: UpdateUserDto): Promise<User> {
 
     // Buscar al usuario por email
-    const user = await this.userRepository.findOne({ where: { email } });
+    
+    const user = await this.userRepository.findOne({ where: { email: updateUserDto.email } });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
     }
 
     // Evitar que el email sea modificado
-    if (updateUserDto.email && updateUserDto.email !== email) {
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
       throw new BadRequestException('No puedes cambiar el email.');
     }
 
@@ -347,7 +348,7 @@ export class UserService {
     if (!user) {
         throw new NotFoundException('Usuario no encontrado.');
     }
-    if (deleter.role<=user.role) {
+    if (deleter.role>=user.role) {
       throw new BadRequestException('No tienes los permisis suficiente');
     }
 

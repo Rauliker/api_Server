@@ -1,31 +1,43 @@
-import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpException, HttpStatus, Logger, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import { NotificationService } from 'src/notification/notification.service';
-import { CreatePujaDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
+import { CreatePujaDto, DeleteImageDto, MakeBidDto, UpdatePujaDto } from './subastas.dto';
 import { PujaService } from './subastas.service';
 
-@ApiTags('Pujas') // Etiqueta para agrupar las rutas en Swagger
+@ApiTags('Pujas') 
 @Controller('pujas')
 export class PujaController {
+  logger = new Logger(PujaService.name);
   constructor(private readonly pujaService: PujaService, private readonly notificationService: NotificationService) {}
 
   @Post()
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Crear una nueva puja' })
-  @ApiBody({ type: CreatePujaDto })
+  @ApiBody({
+    type:CreatePujaDto
+  })
+  
   @UseInterceptors(
     FilesInterceptor('files', 20, {
       storage: diskStorage({
         destination: './images', // Directorio donde se guardarán las imágenes
         filename: (req, file, callback) => {
-          const filename = file.originalname;
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const filename = `${uniqueSuffix}-${file.originalname}`;
           callback(null, filename); // Usar un nombre único
         },
       }),
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+          req.fileValidationError = 'Solo se permiten imágenes';
+          return callback(new BadRequestException('Solo se permiten imágenes'), false);
+        }
+        callback(null, true);
+      },
     }),
   )
   async createPuja(@Body() createPujaDto: CreatePujaDto, @UploadedFiles() files: Express.Multer.File[]) {
@@ -33,7 +45,9 @@ export class PujaController {
     if (!files || files.length === 0) {
       throw new HttpException('No se ha subido ninguna imagen. La imagen es obligatoria.', HttpStatus.BAD_REQUEST);
     }
-
+    
+      console.log(createPujaDto);
+    
     const imagenesUrls = files.map(file => `/images/${file.filename}`);
     
     // Intentar crear la puja
@@ -48,10 +62,9 @@ export class PujaController {
           fs.unlinkSync(filePath);  // Eliminar el archivo subido
         }
       });
-      throw new HttpException('Error al crear la puja, se ha eliminado la imagen.', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new BadRequestException(error);
     }
   }
-
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las pujas' })
@@ -91,16 +104,28 @@ export class PujaController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Actualizar una puja existente' })
   @ApiParam({ name: 'id', description: 'ID de la puja a actualizar' })
-  @ApiBody({ type: UpdatePujaDto })
+  @ApiBody({
+    
+    type:UpdatePujaDto
+  })
+
   @UseInterceptors(
     FilesInterceptor('files', 20, {
       storage: diskStorage({
-        destination: './images',
+        destination: './images', // Directorio donde se guardarán las imágenes
         filename: (req, file, callback) => {
-          const filename = file.originalname;
-          callback(null, filename);
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const filename = `${uniqueSuffix}-${file.originalname}`;
+          callback(null, filename); // Usar un nombre único
         },
       }),
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+          req.fileValidationError = 'Solo se permiten imágenes';
+          return callback(new BadRequestException('Solo se permiten imágenes'), false);
+        }
+        callback(null, true);
+      },
     }),
   )
   async updatePuja(
@@ -108,6 +133,8 @@ export class PujaController {
     @Body() updatePujaDto: UpdatePujaDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
+    
+    this.logger.debug(updatePujaDto);
     const imagenesUrls = files.map(file => `/images/${file.filename}`);
     return this.pujaService.updatePuja(id, { ...updatePujaDto, imagenes: imagenesUrls });
   }
@@ -115,7 +142,7 @@ export class PujaController {
   @Delete(':id/eliminar-imagenes')
   @ApiOperation({ summary: 'Eliminar imágenes de una puja' })
   @ApiParam({ name: 'id', description: 'ID de la puja de la cual eliminar imágenes' })
-  async deleteImagePuja(@Param('id') id: number, @Body() updatePujaDto: UpdatePujaDto) {
+  async deleteImagePuja(@Param('id') id: number, @Body() updatePujaDto: DeleteImageDto) {
     return this.pujaService.deletePujaImages(id, updatePujaDto.eliminatedImages);
   }
 
@@ -154,17 +181,17 @@ export class PujaController {
     return this.pujaService.deletePuja(id);
   }
 
-  @Get('win/:id')
-  @ApiOperation({ summary: 'Procesar la puja ganadora' })
-  @ApiParam({ name: 'id', description: 'ID de la puja ganadora' })
-  pagar(@Param('id') id: number) {
-    return this.pujaService.processWinningBid(id);
-  }
+  // @Get('win/:id')
+  // @ApiOperation({ summary: 'Procesar la puja ganadora' })
+  // @ApiParam({ name: 'id', description: 'ID de la puja ganadora' })
+  // pagar(@Param('id') id: number) {
+  //   return this.pujaService.processWinningBid(id);
+  // }
 
-  @Get('notification/:id')
-  @ApiOperation({ summary: 'Enviar notificación' })
-  @ApiParam({ name: 'id', description: 'ID del usuario' })
-  not(@Param('id') id: string) {
-    return this.notificationService.sendNotification(id, 'prueba', 'prueba');
-  }
+  // @Get('notification/:id')
+  // @ApiOperation({ summary: 'Enviar notificación' })
+  // @ApiParam({ name: 'id', description: 'ID del usuario' })
+  // not(@Param('id') id: string) {
+  //   return this.notificationService.sendNotification(id, 'prueba', 'prueba');
+  // }
 }
