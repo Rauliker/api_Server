@@ -61,30 +61,25 @@ export class UserService {
       throw new BadRequestException('La calle es obligatoria.');
     }
 
-    // Validar provincia y localidad
-    const provincia = await this.provinciaRepository.findOne({
-      where: { id_provincia: createUserDto.provinciaId },
-    });
-
     const localidad = await this.localidadRepository.findOne({
       where: { id_localidad: createUserDto.localidadId },
     });
-
-    if (!provincia) {
+    if (!localidad) {
+      throw new BadRequestException('Localidad no encontrada.');
+    }
+    const provinciaAuto = await this.provinciaRepository.findOne({
+      where: { localidades:localidad },
+    });
+    if (!provinciaAuto) {
       if (!localidad) {
         throw new BadRequestException('Provincia y localidad no encontradas.');
       } else {
-        const provinciaAuto = await this.provinciaRepository.findOne({
-          where: { localidades:localidad },
-        });
-    
+        console.log('p:', provinciaAuto);
         createUserDto.provinciaId = provinciaAuto.id_provincia;
       }
     }
 
-    if (!localidad) {
-      throw new BadRequestException('Localidad no encontrada.');
-    }
+    
 
     // Validar contraseña
     if (!createUserDto.password || createUserDto.password.length < 6) {
@@ -95,7 +90,6 @@ export class UserService {
     const emailInfoUser = await this.userRepository.findOne({ where: { email: emailInfo } });
     if (emailInfoUser != null) {
       if(emailInfoUser.role > createUserDto.role&&emailInfoUser.role==2){
-        console.log('emailInfoUser role:', emailInfoUser?.role);
         createUserDto.role = 2;
       }
     } else {
@@ -125,7 +119,7 @@ export class UserService {
       banned: createUserDto.banned,
       balance: createUserDto.balance,
       calle: createUserDto.calle,
-      provincia,
+      provincia:provinciaAuto,
       localidad,
     });
 
