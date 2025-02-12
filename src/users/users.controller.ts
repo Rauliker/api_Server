@@ -49,12 +49,18 @@ export class UserController {
       return await this.userService.createUser(createUserDto, null, emailInfo);
     }
   
-    const tempFilePaths = files?.map((file) => file.path) || [];
+    const tempFilePaths = [];
+    if (files && files.length > 0) {
+      for (const file of files) {
+      tempFilePaths.push(file.path);
+      }
+    }
   
     try {
-      const imagenesUrls = files.map(
-        (file) => `/images/avatar/${file.filename}`,
-      );
+      const imagenesUrls = [];
+      for (const file of files) {
+        imagenesUrls.push(`/images/avatar/${file.filename}`);
+      }
       const user = await this.userService.createUser(createUserDto, imagenesUrls, emailInfo);
   
       tempFilePaths.forEach((tempPath) => {
@@ -113,13 +119,19 @@ export class UserController {
     }
   
     // Verificar si files es undefined o está vacío
-    const tempFilePaths = files?.map((file) => file.path) || [];
+    const tempFilePaths = [];
+    if (files && files.length > 0) {
+      for (const file of files) {
+      tempFilePaths.push(file.path);
+      }
+    }
   
     try {
       if (files && files.length > 0) {
-        const imagenesUrls = files.map(
-          (file) => `/images/avatar/${file.filename}`,
-        );
+        const imagenesUrls = [];
+        for (const file of files) {
+          imagenesUrls.push(`/images/avatar/${file.filename}`);
+        }
   
         const oldImagePath = `./images/avatar/${updateUserDto.email}-avatar${path.extname(existingUser.avatar || '')}`;
         if (fs.existsSync(oldImagePath)) {

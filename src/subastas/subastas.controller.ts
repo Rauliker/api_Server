@@ -48,7 +48,10 @@ export class PujaController {
     
       console.log(createPujaDto);
     
-    const imagenesUrls = files.map(file => `/images/${file.filename}`);
+    const imagenesUrls = [];
+    for (const file of files) {
+      imagenesUrls.push(`/images/${file.filename}`);
+    }
     
     // Intentar crear la puja
     try {
@@ -135,7 +138,10 @@ export class PujaController {
   ) {
     
     this.logger.debug(updatePujaDto);
-    const imagenesUrls = files.map(file => `/images/${file.filename}`);
+    const imagenesUrls = [];
+    for (const file of files) {
+      imagenesUrls.push(`/images/${file.filename}`);
+    }
     return this.pujaService.updatePuja(id, { ...updatePujaDto, imagenes: imagenesUrls });
   }
 

@@ -53,13 +53,13 @@ export class PujaService {
     const savedPuja = await this.pujaRepository.save(puja);
   
     // Asociar las imágenes a la puja
-    const imagenes = imagenesUrls.map((url) => {
+    const imagenes = [];
+    for (const url of imagenesUrls) {
       const imagen = new Image();
       imagen.url = url;
       imagen.puja = savedPuja;
-      return imagen;
-    });
-    
+      imagenes.push(imagen);
+    }
     // Guardar las imágenes
     await this.imagenRepository.save(imagenes);
     await this.notificationService.sendNotification(creatorId,'Nueva Subasta Creada',
@@ -146,21 +146,20 @@ export class PujaService {
   const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
 
   // Aplicar filtros adicionales (min, max, fecha)
-  const pujasWithPujaActual = await Promise.all(
-    pujas.map(async (puja) => {
-      const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+  const pujasWithPujaActual = [];
+  for (const puja of pujas) {
+    const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
 
-      if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
-        return null;
-      }
+    if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
+      continue;
+    }
 
-      if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
-        return null;
-      }
+    if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
+      continue;
+    }
 
-      return { ...puja, pujaActual };
-    })
-  );
+    pujasWithPujaActual.push({ ...puja, pujaActual });
+  }
 
   return pujasWithPujaActual.filter((puja) => puja !== null);
 }
@@ -182,11 +181,9 @@ export class PujaService {
     }
   
     if (open) {
-      const searchConditions = where.map((condition) => ({
-        ...condition,
-        open: open,
-      }));
-      where.splice(0, where.length, ...searchConditions);
+      for (let i = 0; i < where.length; i++) {
+      where[i].open = open;
+      }
     }
   
     const pujas = await this.pujaRepository.find({
@@ -200,21 +197,20 @@ export class PujaService {
   
     const fechaInsertadaDate = fechaInsertada ? new Date(fechaInsertada) : null;
   
-    const pujasWithPujaActual = await Promise.all(
-      pujas.map(async (puja) => {
-        const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
-  
-        if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
-          return null;
-        }
-  
-        if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
-          return null;
-        }
-  
-        return { ...puja, pujaActual };
-      }),
-    );
+    const pujasWithPujaActual = [];
+    for (const puja of pujas) {
+      const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+    
+      if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
+      continue;
+      }
+    
+      if (fechaInsertadaDate && new Date(puja.fechaFin) <= fechaInsertadaDate) {
+      continue;
+      }
+    
+      pujasWithPujaActual.push({ ...puja, pujaActual });
+    }
   
     return pujasWithPujaActual.filter((puja) => puja !== null);
   }
@@ -267,17 +263,16 @@ export class PujaService {
       relations: ['creator', 'imagenes', 'pujas'],
     });
   
-    const pujasWithPujaActual = await Promise.all(
-      pujas.map(async (puja) => {
-        const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
-  
-        if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
-          return null;
-        }
-  
-        return { ...puja, pujaActual };
-      })
-    );
+    const pujasWithPujaActual = [];
+    for (const puja of pujas) {
+      const pujaActual = await this.getPujaActual(puja.id, puja.pujaInicial);
+    
+      if ((min !== undefined && pujaActual < min) || (max !== undefined && pujaActual > max)) {
+      continue;
+      }
+    
+      pujasWithPujaActual.push({ ...puja, pujaActual });
+    }
   
     return pujasWithPujaActual.filter((puja) => puja !== null);
   }
@@ -383,12 +378,13 @@ export class PujaService {
     const savedPuja = await this.pujaRepository.save(puja);
   
     if (imagenesUrls && imagenesUrls.length) {
-      const newImages = imagenesUrls.map((url) => {
-        const imagen = new Image();
-        imagen.url = url;
-        imagen.puja = savedPuja;
-        return imagen;
-      });
+      const newImages = [];
+      for (const url of imagenesUrls) {
+      const imagen = new Image();
+      imagen.url = url;
+      imagen.puja = savedPuja;
+      newImages.push(imagen);
+      }
       await this.imagenRepository.save(newImages);
     }
   
@@ -693,7 +689,11 @@ export class PujaService {
 
       await this.pujaRepository.save(updatedPuja);
       }
-    return resultados.map((resultado) => resultado.id);
+    const ids = [];
+    for (const resultado of resultados) {
+      ids.push(resultado.id);
+    }
+    return ids;
     }
   }
 }  
