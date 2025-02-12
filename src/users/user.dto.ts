@@ -50,11 +50,7 @@ export class CreateUserDto {
   @IsNumber()
   balance?: number;
 
-  @ApiProperty({
-    description: 'ID de la provincia asociada al usuario',
-    example: 1,
-  })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
   @Transform(({ value }) => parseInt(value, 10))
   provinciaId: number;
@@ -137,13 +133,6 @@ export class UpdateUserDto {
   @Min(0)
   balance?: number;
 
-  
-
-  @ApiProperty({
-    description: 'ID de la provincia asociada al usuario (opcional)',
-    example: 2,
-    required: false,
-  })
   
 
   @IsOptional()

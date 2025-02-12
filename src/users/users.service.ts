@@ -74,7 +74,11 @@ export class UserService {
       if (!localidad) {
         throw new BadRequestException('Provincia y localidad no encontradas.');
       } else {
-        createUserDto.provinciaId = localidad.provincia.id_provincia;
+        const provinciaAuto = await this.provinciaRepository.findOne({
+          where: { localidades:localidad },
+        });
+    
+        createUserDto.provinciaId = provinciaAuto.id_provincia;
       }
     }
 
@@ -88,11 +92,14 @@ export class UserService {
     }
 
     // Validar y corregir el rol si es mayor a 2
-    if (createUserDto.role > 2) {
-      const emilInfoUser = await this.userRepository.findOne({ where: { email: emailInfo } });
-      if(emailInfo==null || emilInfoUser.role > createUserDto.role){
-        createUserDto.role =2;
+    const emailInfoUser = await this.userRepository.findOne({ where: { email: emailInfo } });
+    if (emailInfoUser != null) {
+      if(emailInfoUser.role > createUserDto.role&&emailInfoUser.role==2){
+        console.log('emailInfoUser role:', emailInfoUser?.role);
+        createUserDto.role = 2;
       }
+    } else {
+      createUserDto.role = 2;
     }
 
     // Crear el usuario en Firebase
@@ -166,8 +173,8 @@ export class UserService {
     if (updateUserDto.localidadId !== null) {
       const localidad = await this.localidadRepository.findOne({ where: { id_localidad: updateUserDto.localidadId } });
       if (localidad) {
-        
-        updatedData.provincia = localidad.provincia;
+        const provincia = await this.provinciaRepository.findOne({ where: { localidades: localidad } });
+        updatedData.provincia = provincia;
         updatedData.localidad = localidad;
       }
     }
@@ -192,7 +199,7 @@ export class UserService {
     }
   
     // Verificar que el usuario tiene el rol suficiente para banear
-    if (user.role >= userUpdate.role || user.role == 2) {
+    if (user.role > userUpdate.role || user.role == 2) {
       console.log(userUpdate.role)
       throw new NotFoundException('No tienes rol suficiente para banear a este usuario.');
     }
@@ -348,7 +355,7 @@ export class UserService {
     if (!user) {
         throw new NotFoundException('Usuario no encontrado.');
     }
-    if (deleter.role>=user.role) {
+    if (deleter.role>user.role) {
       throw new BadRequestException('No tienes los permisis suficiente');
     }
 
