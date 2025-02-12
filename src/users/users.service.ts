@@ -307,6 +307,10 @@ export class UserService {
     if (!firebase_login) {
       throw new BadRequestException('Error al iniciar sesión con Firebase');
     }
+    const fcm_token_login = await this.firebaseService.isValidFcmToken(fcmToken);
+    if(fcm_token_login==false){
+      throw new BadRequestException('token invalido');
+    }
     const token = firebase_login.token;
     const tokenRecord = this.tokenRepository.create({
       user: user,

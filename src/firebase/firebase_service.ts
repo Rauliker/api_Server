@@ -98,6 +98,23 @@ export class FirebaseService {
     }
   }
 
+  async isValidFcmToken(token: string): Promise<boolean> {
+    try {
+      const response = await admin.messaging().send({
+        token,
+        notification: {
+          title: 'Verificación',
+          body: 'Probando token',
+        },
+      });
+      console.log('Token válido:', response);
+      return true;
+    } catch (error) {
+      console.error('Token inválido:', error);
+      return false;
+    }
+  }
+
   async getToken(email: string): Promise<string> {
     try {
       const userRecord = await admin.auth().getUserByEmail(email);

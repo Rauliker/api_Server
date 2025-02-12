@@ -375,7 +375,11 @@ export class PujaService {
       }
     }
   
-    Object.assign(puja, pujaData);
+    for (const key in pujaData) {
+      if (pujaData[key] !== undefined) {
+        puja[key] = pujaData[key];
+      }
+    }
     const savedPuja = await this.pujaRepository.save(puja);
   
     if (imagenesUrls && imagenesUrls.length) {
