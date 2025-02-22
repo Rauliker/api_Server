@@ -7,19 +7,21 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'path';
 import { DataSource } from 'typeorm';
-import { Image } from './imagen/imagen.entity';
-import { ImagenModule } from './imagen/imagen.module';
-import { Localidad } from './localidad/localidad.entity';
-import { LocalidadModule } from './localidad/localidad.module';
-import { Token } from './notification/token.entity';
-import { ProvinciaModule } from './provincia/privincia.module';
-import { Provincia } from './provincia/provinvia.entity';
-import { PujaBid } from './subastas/pujaBid.entity';
-import { Puja } from './subastas/subastas.entity';
-import { PujaModule } from './subastas/subastas.module';
+import { Court } from './court/court.entity';
+import { CourtModule } from './court/court.module';
+import { CourtStatus } from './courtStatus/courtStatus.entity';
+import { CourtStatusModule } from './courtStatus/courtStatus.module';
+
+import { CourtType } from './courtType/courtType.entity';
+import { CourtTypeModule } from './courtType/courtType.module';
+import { Reservation } from './reservartion/reservation.entity';
+import { ReservationModule } from './reservartion/reservation.module';
+import { ReservationStatus } from './reservationStatus/reservationStatus.entity';
+import { ReservationStatusModule } from './reservationStatus/reservationStatus.module';
 import { User } from './users/users.entity';
 import { UserModule } from './users/users.module';
 import { UtilsModule } from './utils/utils.module';
+
 
 @Module({
   imports: [
@@ -42,15 +44,18 @@ import { UtilsModule } from './utils/utils.module';
     }),
     JwtModule.register({
       secret: 'mi_secreto_super_seguro', // Clave secreta para firmar el token
-      signOptions: { expiresIn: '24h' },  // Expira en 1 hora
+      signOptions: { expiresIn: '24h' }, 
     }),
     ConfigModule.forRoot(),
-    ProvinciaModule,
-    ImagenModule,
-    PujaModule,
+    CourtModule,
+    CourtTypeModule,
+    CourtStatusModule,
+    ReservationModule,
+    ReservationStatusModule,
     UserModule,
-    LocalidadModule,
     UtilsModule,
+
+
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -68,13 +73,12 @@ import { UtilsModule } from './utils/utils.module';
         // password: process.env.DB_PASSWORD || 'password',
         // database: process.env.DB_NAME || 'mydb',
         entities: [
-          Puja,
-          Image,
+          ReservationStatus,
+          Reservation,
+          CourtStatus,
+          CourtType,
+          Court,
           User,
-          Localidad,
-          Provincia,
-          PujaBid,
-          Token
         ],
         synchronize: true,
       }),
