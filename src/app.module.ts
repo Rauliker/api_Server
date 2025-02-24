@@ -42,11 +42,22 @@ import { UtilsModule } from './utils/utils.module';
       rootPath: path.join(__dirname, '..', 'images'),  // Ruta donde se almacenan los archivos subidos
       serveRoot: '/images',  // Prefijo para acceder a los archivos estáticos
     }),
-    JwtModule.register({
-      secret: 'mi_secreto_super_seguro', // Clave secreta para firmar el token
-      signOptions: { expiresIn: '24h' }, 
+    JwtModule.registerAsync({
+        imports: [ConfigModule],
+        useFactory: async (configService: ConfigService) => {
+            const secretKey = configService.get<string>('SECRET_KEY');
+        return {
+          secret: secretKey,
+          signOptions: { expiresIn: '48h' },
+        };
+      },
+      inject: [ConfigService],
     }),
-    ConfigModule.forRoot(),
+    
+    ConfigModule.forRoot({
+      envFilePath: '.env',  // Asegura que el archivo .env se cargue
+      isGlobal: true,        // Para que todas las variables de entorno estén accesibles globalmente
+    }),
     CourtModule,
     CourtTypeModule,
     CourtStatusModule,
@@ -60,18 +71,18 @@ import { UtilsModule } from './utils/utils.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        host: 'localhost',
-        port: 3306,
-        username: 'root',
-        password: '',
-        database: 'proyecto',
         // type: 'mysql',
-        // host: process.env.DB_HOST || 'localhost',
-        // port: parseInt(process.env.DB_PORT, 10) || 3306,
-        // username: process.env.DB_USER || 'user',
-        // password: process.env.DB_PASSWORD || 'password',
-        // database: process.env.DB_NAME || 'mydb',
+        // host: 'localhost',
+        // port: 3306,
+        // username: 'root',
+        // password: '',
+        // database: 'api',
+        type: 'mysql',
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.MYSQL_PORT, 10) || 3306,
+        username: process.env.MYSQL_USER || 'root',
+        password: process.env.MYSQL_PASSWORD || '',
+        database: process.env.MYSQL_DATABASE || 'api',
         entities: [
           ReservationStatus,
           Reservation,
@@ -87,7 +98,9 @@ import { UtilsModule } from './utils/utils.module';
   ],
   controllers: [],
   providers: [],
+  
 })
+
 export class AppModule {
   constructor(private dataSource: DataSource) {}
 }
