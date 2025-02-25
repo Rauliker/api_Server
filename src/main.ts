@@ -1,11 +1,12 @@
-import { NestFactory } from '@nestjs/core';
-import * as bodyParser from 'body-parser';
-import { AppModule } from './app.module';
-//import { authorizationMiddleware } from './authorization.middleware';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as bodyParser from 'body-parser';
 import * as fs from 'fs';
 import { join } from 'path';
+import { AppModule } from './app.module';
+import { AuthorizationMiddleware } from './authorization.middleware';
 
 const uploadsPath = join(__dirname, '..', 'images');
 if (!fs.existsSync(uploadsPath)) {
@@ -14,7 +15,9 @@ if (!fs.existsSync(uploadsPath)) {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  //app.use(authorizationMiddleware);
+  const jwtService = app.get(JwtService);
+  
+  app.use(new AuthorizationMiddleware(jwtService).use.bind(new AuthorizationMiddleware(jwtService)));
   app.useGlobalPipes(new ValidationPipe());
   app.use(bodyParser.json({ limit: '50mb' })); // Cambia el límite según sea necesario
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));

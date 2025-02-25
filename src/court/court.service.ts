@@ -32,7 +32,10 @@ export class CourtService {
       name: createCourtDto.name,
       type,
       status,
+      availability:createCourtDto.availability
     });
+    console.log('Datos a insertar:', createCourtDto.availability);
+
 
     return this.courtRepository.save(court);
   }

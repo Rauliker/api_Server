@@ -21,7 +21,6 @@ export class ReservationService {
   ) {}
 
   async createReservation(createReservationDto: CreateReservationDto) {
-    // Validate date is not in the past
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (new Date(createReservationDto.date) < today) {
@@ -47,7 +46,21 @@ export class ReservationService {
     }
 
 
-    // Create and save reservation
+    const existingReservations = await this.reservationRepository.find({
+        where: {
+        court: court,
+        date: createReservationDto.date,
+        startTime: createReservationDto.startTime,
+        endTime: createReservationDto.endTime,
+      },
+    });
+
+    if (existingReservations.length > 0) {
+        throw new BadRequestException('There are existing reservations for this court on the selected date.');
+
+    }
+
+
     const reservation = this.reservationRepository.create({
       user,
       court,

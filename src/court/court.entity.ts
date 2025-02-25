@@ -19,4 +19,16 @@ export class Court {
 
   @OneToMany(() => Reservation, (reservation) => reservation.court)
   reservations: Reservation[];
+
+  @Column('json', { nullable: false })
+  availability: {
+    monday: string[];
+    tuesday: string[];
+    wednesday: string[];
+    thursday: string[];
+    friday: string[];
+    saturday: string[]; 
+    sunday: string[];
+  };
 }
+
