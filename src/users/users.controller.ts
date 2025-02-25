@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
 import { AuthorizationMiddleware } from '../authorization.middleware';
 import { CreateUserDto, LoginUserDto, UpdateUserDto } from './user.dto';
+import { User } from './users.entity';
 import { UserService } from './users.service';
 
 @Controller('users')
@@ -22,8 +23,9 @@ export class UserController {
 
   }
   @Get()
-  async findAll() {
-    return this.userService.findAll();
+  async findAll(@Request() req): Promise<User[]> {
+    const token = req.headers.authorization.split(' ')[1];
+    return this.userService.findAll(token);
   }
 
   @Get(':id')
@@ -37,12 +39,16 @@ export class UserController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: number, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(id, updateUserDto);
+  async update(@Request() req, @Body() updateUserDto: UpdateUserDto) {
+    const token = req.headers.authorization.split(' ')[1];
+
+    return this.userService.update(token, updateUserDto);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: number) {
-    return this.userService.remove(id);
+  async remove(@Request() req) {
+    const token = req.headers.authorization.split(' ')[1];
+
+    return this.userService.remove(token);
   }
 }

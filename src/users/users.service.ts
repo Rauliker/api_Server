@@ -24,8 +24,11 @@ export class UserService {
     return { accessToken };
   }
 
-  async findAll(): Promise<User[]> {
-    return this.userRepository.find();
+  async findAll(token: string): Promise<User[]> {
+    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    const userId = decodedToken.sub;
+    return this.userRepository.find({ where: { id: userId } });
+
   }
 
   async findOne(id: number): Promise<User | null> {
@@ -41,24 +44,46 @@ export class UserService {
     if(userFindName){
       throw new UnauthorizedException('Username already exists');
     }
+    if (createUserDto.password.length < 6 || createUserDto.password.length > 20) {
+      throw new UnauthorizedException('Password must be between 6 and 20 characters long');
+    }
+    
+    if (createUserDto.password.length < 6 || createUserDto.password.length > 20) {
+      throw new UnauthorizedException('Password must be at least 6 characters long');
+    }
+    
+    const hasLetter = createUserDto.password.match(/[a-zA-Z]/);
+    const hasNumber = createUserDto.password.match(/\d/);
+    
+    // Verificamos si la contraseña tiene letras y números
+    if (!hasLetter || !hasNumber) {
+      throw new UnauthorizedException('Password must contain both letters and numbers');
+    }
+    
+    
     const user = this.userRepository.create(createUserDto);
     return this.userRepository.save(user);
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
+  async update(token: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    const userId = decodedToken.sub;
+    const user = await this.userRepository.findOne({ where: {id: userId } });
+    
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    await this.userRepository.update(id, updateUserDto);
-    return this.userRepository.findOne({ where: { id } });
+    await this.userRepository.update(userId, updateUserDto);
+    return this.userRepository.findOne({ where: { id:userId } });
   }
 
-  async remove(id: number): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { id } });
+  async remove(token: string): Promise<void> {
+    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    const userId = decodedToken.sub;
+    const user = await this.userRepository.findOne({ where: { id:userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    await this.userRepository.delete(id);
+    await this.userRepository.delete(userId);
   }
 }

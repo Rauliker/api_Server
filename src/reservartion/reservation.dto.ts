@@ -1,9 +1,9 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 
 export class CreateReservationDto {
     @IsInt()
-    @IsNotEmpty()
-    userId: number;
+    @IsOptional()
+    userId?: number;
 
     @IsString()
     @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "La fecha debe estar en formato YYYY-MM-DD" })
@@ -23,8 +23,8 @@ export class CreateReservationDto {
     @IsInt()
     @IsNotEmpty()
     courtId: number;
-
-    @IsInt()
-    @IsOptional()
-    statusId?: number;
+    
+    @IsIn(['created', 'confirmed', 'rejected'], { message: 'El estado debe ser "created", "confirmed" o "rejected"' })
+    @IsNotEmpty()
+    status: string;
 }

@@ -2,10 +2,9 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Court } from '../court/court.entity';
-import { ReservationStatus } from '../reservationStatus/reservationStatus.entity';
 import { User } from '../users/users.entity';
 import { CreateReservationDto } from './reservation.dto';
-import { Reservation } from './reservation.entity';
+import { Reservation, ReservationStatusEnum } from './reservation.entity';
 
 @Injectable()
 export class ReservationService {
@@ -16,8 +15,6 @@ export class ReservationService {
     private userRepository: Repository<User>,
     @InjectRepository(Court)
     private courtRepository: Repository<Court>,
-    @InjectRepository(ReservationStatus)
-    private statusRepository: Repository<ReservationStatus>,
   ) {}
 
   private readonly logger = new Logger(ReservationService.name);
@@ -49,7 +46,7 @@ export class ReservationService {
   }
 
   async createReservation(createReservationDto: CreateReservationDto) {
-    const { userId, courtId, date, startTime, endTime, statusId } = createReservationDto;
+    const { userId, courtId, date, startTime, endTime, status } = createReservationDto;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -73,12 +70,6 @@ export class ReservationService {
       throw new NotFoundException('Court not found');
     }
 
-    let status = statusId ? await this.statusRepository.findOneBy({ id: statusId }) : null;
-    if (!status) {
-      status = await this.statusRepository.findOne({ where: { name: 'Creada' } });
-      if (!status) throw new NotFoundException('Default status "created" not found');
-    }
-
     // Obtener el nombre del día de la semana
     const dayName = this.getDayName(reservationDate);
 
@@ -99,21 +90,36 @@ export class ReservationService {
       .getMany();
 
     for (const reservation of existingReservations) {
-        this.logger.log('This is a log message');
-      if (
-        this.isTimeOverlap(reservation.startTime, reservation.endTime, startTime, endTime)
-      ) {
+      this.logger.log(`Checking existing reservation: ${reservation.date} from ${reservation.startTime} to ${reservation.endTime}`);
+
+      if (this.isTimeOverlap(reservation.startTime, reservation.endTime, startTime, endTime)) {
         throw new BadRequestException('There are existing reservations for this court on the selected date and time.');
       }
+    }
+
+    // Asignar el estado proporcionado desde el DTO
+    let reservationStatus: ReservationStatusEnum;
+    switch (status) {
+      case 'created':
+        reservationStatus = ReservationStatusEnum.CREATED;
+        break;
+      case 'confirmed':
+        reservationStatus = ReservationStatusEnum.CONFIRMED;
+        break;
+      case 'rejected':
+        reservationStatus = ReservationStatusEnum.REJECTED;
+        break;
+      default:
+        throw new BadRequestException('Invalid reservation status');
     }
 
     const reservation = this.reservationRepository.create({
       user,
       court,
-      date: date,
+      date: reservationDate,
       startTime,
       endTime,
-      status,
+      status: reservationStatus,
     });
 
     return this.reservationRepository.save(reservation);
@@ -122,26 +128,18 @@ export class ReservationService {
   async cancelReservation(reservationId: number) {
     const reservation = await this.reservationRepository.findOne({
       where: { id: reservationId },
-      relations: ['status'],
     });
 
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }
 
-    if (['Completada', 'Cancelada'].includes(reservation.status.name.toLowerCase())) {
-      throw new BadRequestException('Cannot cancel a completed or already canceled reservation');
+    if ([ReservationStatusEnum.CONFIRMED, ReservationStatusEnum.REJECTED].includes(reservation.status)) {
+      throw new BadRequestException('Cannot cancel a confirmed or rejected reservation');
     }
 
-    const canceledStatus = await this.statusRepository.findOne({
-      where: { name: 'Cancelada' },
-    });
+    reservation.status = ReservationStatusEnum.REJECTED;
 
-    if (!canceledStatus) {
-      throw new NotFoundException('Canceled status not found');
-    }
-
-    reservation.status = canceledStatus;
     return this.reservationRepository.save(reservation);
   }
 }

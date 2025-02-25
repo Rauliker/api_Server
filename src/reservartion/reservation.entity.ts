@@ -1,7 +1,13 @@
 import { Court } from "src/court/court.entity";
-import { ReservationStatus } from "src/reservationStatus/reservationStatus.entity";
 import { User } from "src/users/users.entity";
 import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+
+// Definir un enum para los estados de la reserva
+export enum ReservationStatusEnum {
+  CREATED = 'created',
+  CONFIRMED = 'confirmed',
+  REJECTED = 'rejected'
+}
 
 @Entity()
 export class Reservation {
@@ -23,8 +29,12 @@ export class Reservation {
   @Column({ type: 'time', nullable: false })
   endTime: string;
 
-  @ManyToOne(() => ReservationStatus, { nullable: false })
-  status: ReservationStatus;
+  @Column({
+    type: 'enum',
+    enum: ReservationStatusEnum,
+    default: ReservationStatusEnum.CREATED,
+  })
+  status: ReservationStatusEnum;
 
   @CreateDateColumn()
   createdAt: Date;
