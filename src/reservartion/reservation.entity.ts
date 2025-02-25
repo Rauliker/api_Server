@@ -8,22 +8,22 @@ export class Reservation {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, (user) => user.reservations)
+  @ManyToOne(() => User, (user) => user.reservations, { nullable: false, onDelete: "CASCADE" })
   user: User;
 
-  @ManyToOne(() => Court, (court) => court.reservations)
+  @ManyToOne(() => Court, (court) => court.reservations, { nullable: false, onDelete: "CASCADE" })
   court: Court;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: false })
   date: Date;
 
-  @Column()
+  @Column({ type: 'time', nullable: false })
   startTime: string;
 
-  @Column()
+  @Column({ type: 'time', nullable: false })
   endTime: string;
 
-  @ManyToOne(() => ReservationStatus)
+  @ManyToOne(() => ReservationStatus, { nullable: false })
   status: ReservationStatus;
 
   @CreateDateColumn()
