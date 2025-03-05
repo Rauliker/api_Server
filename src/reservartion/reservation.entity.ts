@@ -1,44 +1,31 @@
-import { Court } from "src/court/court.entity";
-import { User } from "src/users/users.entity";
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-
-// Definir un enum para los estados de la reserva
-export enum ReservationStatusEnum {
-  CREATED = 'created',
-  CONFIRMED = 'confirmed',
-  REJECTED = 'rejected'
-}
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class Reservation {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, (user) => user.reservations, { nullable: false, onDelete: "CASCADE" })
-  user: User;
+  @Column()
+  venueId: string;
 
-  @ManyToOne(() => Court, (court) => court.reservations, { nullable: false, onDelete: "CASCADE" })
-  court: Court;
+  @Column()
+  userId: string;
 
-  @Column({ type: 'date', nullable: false })
-  date: Date;
+  @Column()
+  beginTime: number;
 
-  @Column({ type: 'time', nullable: false })
-  startTime: string;
+  @Column()
+  endTime: number;
 
-  @Column({ type: 'time', nullable: false })
-  endTime: string;
+  @Column()
+  bookingTime: number;
 
-  @Column({
-    type: 'enum',
-    enum: ReservationStatusEnum,
-    default: ReservationStatusEnum.CREATED,
-  })
-  status: ReservationStatusEnum;
+  @Column('int', { array: true })
+  hours: number[];
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @Column()
+  totalPrice: number;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
+  @Column()
+  status: string; // You can define an enum for status if needed
 }

@@ -1,30 +1,61 @@
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateReservationDto {
-    @IsInt()
-    @IsOptional()
-    userId?: number;
+  @IsString()
+  @IsNotEmpty()
+  venueId: string;
 
-    @IsString()
-    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "La fecha debe estar en formato YYYY-MM-DD" })
-    @IsNotEmpty()
-    date: string;
+  @IsString()
+  @IsNotEmpty()
+  userId: string;
 
-    @IsString()
-    @Matches(/^\d{2}:\d{2}$/, { message: "La hora debe estar en formato HH:MM" })
-    @IsNotEmpty()
-    startTime: string;
+  @IsInt()
+  @IsNotEmpty()
+  beginTime: number;
 
-    @IsString()
-    @Matches(/^\d{2}:\d{2}$/, { message: "La hora debe estar en formato HH:MM" })
-    @IsNotEmpty()
-    endTime: string;
+  @IsInt()
+  @IsNotEmpty()
+  endTime: number;
 
-    @IsInt()
-    @IsNotEmpty()
-    courtId: number;
-    
-    @IsIn(['created', 'confirmed', 'rejected'], { message: 'El estado debe ser "created", "confirmed" o "rejected"' })
-    @IsNotEmpty()
-    status: string;
+  @IsInt({ each: true })
+  @IsNotEmpty()
+  hours: number[];
+
+  @IsInt()
+  @IsNotEmpty()
+  bookingTime: number;
+
+  @IsInt()
+  @IsNotEmpty()
+  totalPrice: number;
+}
+
+export class UpdateReservationDto {
+  @IsString()
+  @IsOptional()
+  venueId?: string;
+
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @IsInt()
+  @IsOptional()
+  beginTime?: number;
+
+  @IsInt()
+  @IsOptional()
+  endTime?: number;
+
+  @IsInt({ each: true })
+  @IsOptional()
+  hours?: number[];
+
+  @IsInt()
+  @IsOptional()
+  bookingTime?: number;
+
+  @IsInt()
+  @IsOptional()
+  totalPrice?: number;
 }
