@@ -35,6 +35,14 @@ export class UserService {
     return this.userRepository.findOne({ where: { idUser } });
   }
 
+  async findName(name: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { name } });
+  }
+
+  async findUsername(username: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { username } });
+  }
+
   async create(createUserDto: CreateUserDto): Promise<User> {
     const userFindEmail = await this.userRepository.findOne({ where: { email:createUserDto.email } });
     if(userFindEmail){
@@ -55,7 +63,6 @@ export class UserService {
     const hasLetter = createUserDto.password.match(/[a-zA-Z]/);
     const hasNumber = createUserDto.password.match(/\d/);
     
-    // Verificamos si la contraseña tiene letras y números
     if (!hasLetter || !hasNumber) {
       throw new UnauthorizedException('Password must contain both letters and numbers');
     }
@@ -65,9 +72,9 @@ export class UserService {
     return this.userRepository.save(user);
   }
 
-  async update(token: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
-    const userId = decodedToken.sub;
+  async update(userId: number, updateUserDto: UpdateUserDto): Promise<User> {
+    // const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    // const userId = decodedToken.sub;
     const user = await this.userRepository.findOne({ where: {idUser: userId } });
     
     if (!user) {

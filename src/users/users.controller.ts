@@ -47,10 +47,17 @@ export class UserController {
   }
 
   @Put(':id')
-  async update(@Request() req, @Body() updateUserDto: UpdateUserDto) {
-    const token = req.headers.authorization.split(' ')[1];
+  @UseInterceptors(FileInterceptor('image'))
+  async update(@Request() req, @Param('id') id: number, @Body() updateUserDto: UpdateUserDto, @UploadedFile() file?: Express.Multer.File) {
+    if(file){
+      const imageName = `${file.originalname.split('.')[0]}_${new Date().toISOString().split('T')[0]}.${file.originalname.split('.').pop()}`;
+      const imagePath = `images/${imageName}`;    
+      await saveFile(file, imagePath);
+      updateUserDto.image=imagePath;
+    }
+    // const token = req.headers.authorization.split(' ')[1];
 
-    return this.userService.update(token, updateUserDto);
+    return this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id')
