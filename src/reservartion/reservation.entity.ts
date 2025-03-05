@@ -20,12 +20,17 @@ export class Reservation {
   @Column()
   bookingTime: number;
 
-  @Column('int', { array: true })
+  @Column('text', { nullable: true })
   hours: number[];
 
-  @Column()
+
+  @Column({ nullable: false })
   totalPrice: number;
 
+  @Column({ nullable: false })
+  status: string; 
+
   @Column()
-  status: string; // You can define an enum for status if needed
+  imageLink: string; 
+
 }

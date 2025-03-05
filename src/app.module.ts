@@ -14,6 +14,7 @@ import { User } from './users/users.entity';
 import { UserModule } from './users/users.module';
 import { UtilsModule } from './utils/utils.module';
 import { Venue } from './venue/venue.entity';
+import { VenueModule } from './venue/venue.module';
 
 @Module({
 
@@ -52,6 +53,7 @@ import { Venue } from './venue/venue.entity';
     }),
     UserModule,
     ReservationModule,
+    VenueModule,
     UtilsModule,
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
@@ -67,6 +69,7 @@ import { Venue } from './venue/venue.entity';
           Reservation, 
           Venue,
           User,
+          Venue
         ],
         synchronize: true,
       }),

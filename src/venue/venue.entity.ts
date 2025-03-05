@@ -15,7 +15,7 @@ export class Venue {
   pricePerHour: number;
 
   @Column()
-  category: string; // You can define an enum for category if needed
+  category: string; 
 
   @Column('float')
   rating: number;

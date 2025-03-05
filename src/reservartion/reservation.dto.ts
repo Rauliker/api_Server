@@ -17,9 +17,8 @@ export class CreateReservationDto {
   @IsNotEmpty()
   endTime: number;
 
-  @IsInt({ each: true })
-  @IsNotEmpty()
-  hours: number[];
+  @IsOptional()
+  hours?: number[]; 
 
   @IsInt()
   @IsNotEmpty()
@@ -28,6 +27,9 @@ export class CreateReservationDto {
   @IsInt()
   @IsNotEmpty()
   totalPrice: number;
+  @IsString()
+  @IsNotEmpty()
+  imageLink: string;
 }
 
 export class UpdateReservationDto {
@@ -47,9 +49,8 @@ export class UpdateReservationDto {
   @IsOptional()
   endTime?: number;
 
-  @IsInt({ each: true })
   @IsOptional()
-  hours?: number[];
+  hours?: string; 
 
   @IsInt()
   @IsOptional()

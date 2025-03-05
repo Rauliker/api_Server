@@ -19,7 +19,7 @@ export class UserService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { email: user.email, name: user.name, sub: user.id };
+    const payload = { email: user.email, name: user.name, sub: user.idUser };
     const accessToken = this.jwtService.sign(payload, { secret: process.env.SECRET_KEY });
     return { accessToken };
   }
@@ -27,12 +27,12 @@ export class UserService {
   async findAll(token: string): Promise<User[]> {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
-    return this.userRepository.find({ where: { id: userId } });
+    return this.userRepository.find({ where: { idUser: userId } });
 
   }
 
-  async findOne(id: number): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id } });
+  async findOne(idUser: number): Promise<User | null> {
+    return this.userRepository.findOne({ where: { idUser } });
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -68,19 +68,19 @@ export class UserService {
   async update(token: string, updateUserDto: UpdateUserDto): Promise<User> {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
-    const user = await this.userRepository.findOne({ where: {id: userId } });
+    const user = await this.userRepository.findOne({ where: {idUser: userId } });
     
     if (!user) {
       throw new NotFoundException('User not found');
     }
     await this.userRepository.update(userId, updateUserDto);
-    return this.userRepository.findOne({ where: { id:userId } });
+    return this.userRepository.findOne({ where: { idUser:userId } });
   }
 
   async remove(token: string): Promise<void> {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
-    const user = await this.userRepository.findOne({ where: { id:userId } });
+    const user = await this.userRepository.findOne({ where: { idUser:userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }

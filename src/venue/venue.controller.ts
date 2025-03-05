@@ -1,4 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { saveFile } from '../utils/file.utils';
 import { CreateVenueDto } from './venue.dto';
 import { VenueService } from './venue.service';
 
@@ -7,8 +9,14 @@ export class VenueController {
   constructor(private readonly venueService: VenueService) {}
 
   @Post()
-  create(@Body() createVenueDto: CreateVenueDto) {
-    return this.venueService.create(createVenueDto);
+  @UseInterceptors(FileInterceptor('image'))
+  async create(@UploadedFile() file: Express.Multer.File, @Body() createVenueDto: CreateVenueDto) {
+    const imageName = `${file.originalname.split('.')[0]}_${new Date().toISOString().split('T')[0]}.${file.originalname.split('.').pop()}`;
+    const imagePath = `images/${imageName}`;
+    
+    await saveFile(file, imagePath);
+    
+    return this.venueService.create({ ...createVenueDto, image: imagePath });
   }
 
   @Get()

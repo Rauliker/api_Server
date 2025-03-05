@@ -1,13 +1,15 @@
-import { Reservation } from 'src/reservartion/reservation.entity';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
-  id: number;
+  idUser: number;
 
   @Column()
   name: string;
+
+  @Column()
+  username: string;
 
   @Column({ unique: true })
   email: string;
@@ -15,6 +17,13 @@ export class User {
   @Column()
   password: string;
 
-  @OneToMany(() => Reservation, (reservation) => reservation.user)
-  reservations: Reservation[];
+  @Column()
+  address: string;
+
+  @Column()
+  phoneNumber: string;
+
+  @Column()
+  image: string; 
+
 }
