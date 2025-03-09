@@ -40,7 +40,7 @@ export class UserService {
     if(userFindEmail){
       throw new UnauthorizedException('Email already exists');
     }
-    const userFindName = await this.userRepository.findOne({ where: { email:createUserDto.name } });
+    const userFindName = await this.userRepository.findOne({ where: { email:createUserDto.username } });
     if(userFindName){
       throw new UnauthorizedException('Username already exists');
     }
@@ -59,7 +59,10 @@ export class UserService {
     if (!hasLetter || !hasNumber) {
       throw new UnauthorizedException('Password must contain both letters and numbers');
     }
-    
+    const phone = createUserDto.phone;
+    if(phone.length < 9 || phone.length > 9){
+      throw new UnauthorizedException('Phone number must be 9 digits long');
+    }
     
     const user = this.userRepository.create(createUserDto);
     return this.userRepository.save(user);
@@ -72,6 +75,17 @@ export class UserService {
     
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+    if (updateUserDto.password && (updateUserDto.password.length < 6 || updateUserDto.password.length > 20)) {
+      throw new UnauthorizedException('Password must be between 6 and 20 characters long');
+    }
+    const userFindEmail = await this.userRepository.findOne({ where: { email:updateUserDto.email } });
+    if(userFindEmail){
+      throw new UnauthorizedException('Email already exists');
+    }
+    const userFindName = await this.userRepository.findOne({ where: { email:updateUserDto.username } });
+    if(userFindName){
+      throw new UnauthorizedException('Username already exists');
     }
     await this.userRepository.update(userId, updateUserDto);
     return this.userRepository.findOne({ where: { id:userId } });

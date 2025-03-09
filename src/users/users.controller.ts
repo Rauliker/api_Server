@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Request, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthorizationMiddleware } from '../authorization.middleware';
 import { CreateUserDto, LoginUserDto, UpdateUserDto } from './user.dto';
 import { User } from './users.entity';
@@ -17,7 +17,7 @@ export class UserController {
       const loginSuccesful=this.userService.login(loginDto.email, loginDto.password);
       message={message:"Login Sucessful", token:(await loginSuccesful).accessToken}
     } catch (error) {
-      message={message:error}
+      throw new UnauthorizedException('Invalid credentials');
     }
     return message;
 
