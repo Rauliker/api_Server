@@ -36,20 +36,17 @@ export class UserService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
+
     const userFindEmail = await this.userRepository.findOne({ where: { email:createUserDto.email } });
     if(userFindEmail){
-      throw new UnauthorizedException('Email already exists');
-    }
-    const userFindName = await this.userRepository.findOne({ where: { email:createUserDto.username } });
-    if(userFindName){
-      throw new UnauthorizedException('Username already exists');
-    }
-    if (createUserDto.password.length < 6 || createUserDto.password.length > 20) {
-      throw new UnauthorizedException('Password must be between 6 and 20 characters long');
-    }
+      throw new UnauthorizedException('El email ya existe');    }
     
+    const userFindName = await this.userRepository.findOne({ where: { username:createUserDto.username } });
+    if(userFindName){
+      throw new UnauthorizedException('El nombre de usuario ya existe');
+    }
     if (createUserDto.password.length < 6 || createUserDto.password.length > 20) {
-      throw new UnauthorizedException('Password must be at least 6 characters long');
+      throw new UnauthorizedException('La contraseña debe tener entre 6 y 20 caracteres');
     }
     
     const hasLetter = createUserDto.password.match(/[a-zA-Z]/);
@@ -57,11 +54,17 @@ export class UserService {
     
     // Verificamos si la contraseña tiene letras y números
     if (!hasLetter || !hasNumber) {
-      throw new UnauthorizedException('Password must contain both letters and numbers');
+      throw new UnauthorizedException('La contraseña debe tener al menos una letra y un número');
     }
-    const phone = createUserDto.phone;
-    if(phone.length < 9 || phone.length > 9){
-      throw new UnauthorizedException('Phone number must be 9 digits long');
+    if(createUserDto.phone === undefined||createUserDto.phone === '' || createUserDto.phone === null){
+      throw new UnauthorizedException('El número de teléfono es requerido');
+    }
+    if (createUserDto.phone.length !== 9) {
+      throw new UnauthorizedException('El número de teléfono debe tener 9 dígitos');
+    }
+    
+    if(createUserDto.address === undefined || createUserDto.address === '' || createUserDto.address === null){
+      throw new UnauthorizedException('La dirección es requerida');
     }
     
     const user = this.userRepository.create(createUserDto);
@@ -74,18 +77,18 @@ export class UserService {
     const user = await this.userRepository.findOne({ where: {id: userId } });
     
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Usuario no encontrado');
     }
     if (updateUserDto.password && (updateUserDto.password.length < 6 || updateUserDto.password.length > 20)) {
-      throw new UnauthorizedException('Password must be between 6 and 20 characters long');
+      throw new UnauthorizedException('La contraseña debe tener entre 6 y 20 caracteres');
     }
     const userFindEmail = await this.userRepository.findOne({ where: { email:updateUserDto.email } });
     if(userFindEmail){
-      throw new UnauthorizedException('Email already exists');
+      throw new UnauthorizedException('El email ya existe');
     }
     const userFindName = await this.userRepository.findOne({ where: { email:updateUserDto.username } });
     if(userFindName){
-      throw new UnauthorizedException('Username already exists');
+      throw new UnauthorizedException('El nombre de usuario ya existe');
     }
     await this.userRepository.update(userId, updateUserDto);
     return this.userRepository.findOne({ where: { id:userId } });
@@ -96,7 +99,7 @@ export class UserService {
     const userId = decodedToken.sub;
     const user = await this.userRepository.findOne({ where: { id:userId } });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('usuario no encontrado');
     }
     await this.userRepository.delete(userId);
   }

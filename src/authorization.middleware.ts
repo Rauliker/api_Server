@@ -20,9 +20,9 @@ export class AuthorizationMiddleware {
       try {
         const decoded = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
       } catch (error) {
-        this.logger.error('Token verification failed', error.message); // Log the error message
+        // this.logger.error('Token verification failed', error.message);
         
-        console.log("token ", error)
+        // console.log("token ", error)
         throw new UnauthorizedException('Invalid token');
       }
     }
