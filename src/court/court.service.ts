@@ -46,6 +46,20 @@ export class CourtService {
     });
   }
 
+  async addImage(id: number, file: Express.Multer.File) {
+    const court = await this.findOne(id);
+    court.imageUrl = court.name + court.type.name;
+    const validImageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+    const fileExtension = file.originalname.split('.').pop();
+
+    if (!validImageExtensions.includes(fileExtension)) {
+      throw new Error('Invalid file type');
+    }
+
+    court.imageUrl += `.${fileExtension}`;
+    return this.courtRepository.save(court);
+  }
+
   async findOne(id: number) {
     const court = await this.courtRepository.findOne({
       where: { id },

@@ -11,6 +11,9 @@ export class Court {
   @Column()
   name: string;
 
+  @Column({ nullable: true, default: null })
+  imageUrl: string;
+  
   @ManyToOne(() => CourtType)
   type: CourtType;
 
