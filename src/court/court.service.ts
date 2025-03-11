@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CourtStatus } from '../courtStatus/courtStatus.entity';
 import { CourtType } from '../courtType/courtType.entity';
 import { CreateCourtDto, UpdateCourtDto } from './court.dto';
 import { Court } from './court.entity';
+const fs = require('fs');
+const path = require('path');
 
 @Injectable()
 export class CourtService {
@@ -61,15 +63,25 @@ export class CourtService {
   }
 
   async addImage(id: number, file: Express.Multer.File) {
+    console.log('Archivo recibido:', file); 
+    if (!file) {
+        throw new BadRequestException('No file uploaded');
+    }
     const court = await this.findOne(id);
-    court.imageUrl = court.name + court.type.name;
+    court.imageUrl ="images/"+ court.name + court.type.name;
     const validImageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
     const fileExtension = file.originalname.split('.').pop();
 
     if (!validImageExtensions.includes(fileExtension)) {
       throw new NotFoundException('Invalid file type');
     }
+    const imagesDir = path.join(__dirname, '..', '..', 'images');
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir);
+    }
 
+    const filePath = path.join(imagesDir, `${court.name}_${court.type.name}.${fileExtension}`);
+    fs.writeFileSync(filePath, file.buffer);
     court.imageUrl += `.${fileExtension}`;
     return this.courtRepository.save(court);
   }
@@ -103,7 +115,24 @@ export class CourtService {
       }
       court.status = status;
     }
+    if(updateCourtDto.price <= 0){
+      throw new UnauthorizedException('Price must be greater than 0');
+    }
+    if (updateCourtDto.price !== null) {
+      court.price = updateCourtDto.price;
+    }
 
+    if (updateCourtDto.availability !== null) {
+      court.availability = {
+        monday: updateCourtDto.availability.monday || [],
+        tuesday: updateCourtDto.availability.tuesday || [],
+        wednesday: updateCourtDto.availability.wednesday || [],
+        thursday: updateCourtDto.availability.thursday || [],
+        friday: updateCourtDto.availability.friday || [],
+        saturday: updateCourtDto.availability.saturday || [],
+        sunday: updateCourtDto.availability.sunday || [],
+      };
+    }
     if (updateCourtDto.name) {
       court.name = updateCourtDto.name;
     }
