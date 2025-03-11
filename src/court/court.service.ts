@@ -56,10 +56,14 @@ export class CourtService {
     return this.courtRepository.save(court);
   }
 
-  async findAll() {
-    return this.courtRepository.find({
-      relations: ['type', 'status'],
-    });
+  async findAll(type: number) {
+    if (type) {
+      return this.courtRepository.find({ where: { type: { id: type } }, relations: ['type', 'status'] });
+    }else{
+      return this.courtRepository.find({
+        relations: ['type', 'status'],
+      });
+    }
   }
 
   async addImage(id: number, file: Express.Multer.File) {

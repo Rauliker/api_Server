@@ -13,8 +13,8 @@ export class CourtController {
   }
 
   @Get()
-  async findAll() {
-    return this.courtService.findAll();
+  async findAll(@Param('type') type: number) {
+    return this.courtService.findAll(type);
   }
 
   @Get(':id')
