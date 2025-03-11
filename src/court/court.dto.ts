@@ -2,6 +2,7 @@ export class CreateCourtDto {
   name: string;
   typeId: number;
   statusId: number;
+  price: number;
   
   availability: {
     monday: string[];
@@ -19,6 +20,7 @@ export class UpdateCourtDto {
   name?: string;
   typeId?: number;
   statusId?: number;
+  price?: number;
 
   availability?: {
     monday?: string[];

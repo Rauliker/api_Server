@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CourtStatus } from '../courtStatus/courtStatus.entity';
@@ -27,11 +27,25 @@ export class CourtService {
     if (!status) {
       throw new NotFoundException('Court status not found');
     }
+    if (!createCourtDto.name) {
+      throw new UnauthorizedException('Name is required');
+    }
+
+    if (createCourtDto.availability === null || createCourtDto.availability === undefined) {
+      throw new UnauthorizedException('Availability is required');
+    }
+    if(createCourtDto.price === null || createCourtDto.price === undefined){
+      throw new UnauthorizedException('Price is required');
+    }
+    if(createCourtDto.price <= 0){
+      throw new UnauthorizedException('Price must be greater than 0');
+    }
 
     const court = this.courtRepository.create({
       name: createCourtDto.name,
       type,
       status,
+      price: createCourtDto.price,
       availability:createCourtDto.availability
     });
     console.log('Datos a insertar:', createCourtDto.availability);
@@ -53,7 +67,7 @@ export class CourtService {
     const fileExtension = file.originalname.split('.').pop();
 
     if (!validImageExtensions.includes(fileExtension)) {
-      throw new Error('Invalid file type');
+      throw new NotFoundException('Invalid file type');
     }
 
     court.imageUrl += `.${fileExtension}`;

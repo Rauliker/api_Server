@@ -13,6 +13,8 @@ export class Court {
 
   @Column({ nullable: true, default: null })
   imageUrl: string;
+  @Column()
+  price: number;
   
   @ManyToOne(() => CourtType)
   type: CourtType;
