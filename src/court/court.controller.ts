@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, Post, Put, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateCourtDto, UpdateCourtDto } from './court.dto';
 import { CourtService } from './court.service';
@@ -13,7 +13,7 @@ export class CourtController {
   }
 
   @Get()
-  async findAll(@Param('type') type: number) {
+  async findAll(@Query('type') type: number) {
     return this.courtService.findAll(type);
   }
 

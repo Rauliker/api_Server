@@ -1,13 +1,18 @@
-import { BadRequestException, Body, Controller, Delete, Param, Post, Request } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Request } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
-import { CreateReservationDto } from './reservation.dto';
+import { CreateReservationDto, UpdateReservationDto } from './reservation.dto';
 import { ReservationService } from './reservation.service';
 
 @Controller('reservation')
 export class ReservationController {
   constructor(private readonly reservationService: ReservationService, private readonly jwtService: JwtService) {}
 
+
+  @Get('/:email')
+  async getReservations(@Param('email') email: string) {
+    return this.reservationService.getReservationsByUserEmail(email);
+  }
 
   @Post()
   async createReservation(@Request() req,@Body() createReservationDto: CreateReservationDto) {
@@ -31,6 +36,10 @@ export class ReservationController {
     return this.reservationService.createReservation(createReservationDto);
   }
 
+  @Put(':id')
+  async updateReservation(@Param('id') id: string, @Body() updateReservationDto: UpdateReservationDto) {
+    return this.reservationService.updateReservation(Number(id), updateReservationDto);
+  }
   @Delete(':id')
   async cancelReservation(@Param('id') id: string) {
     return this.reservationService.cancelReservation(Number(id));

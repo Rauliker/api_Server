@@ -10,7 +10,12 @@ export class AuthorizationMiddleware {
 
   use(req: Request, res: Response, next: NextFunction) {
     const token = req.headers['authorization']?.split(' ')[1];
-    const isPublicRoute = (req.method === 'POST' && (req.path === '/users' || req.path === '/users/login'));
+    const isPublicRoute = (req.method === 'POST' && (req.path === '/users' || req.path === '/users/login')) ||
+                (req.method === 'GET' && (req.path.startsWith('/images') || 
+                            req.path.startsWith('/court') || 
+                            req.path.startsWith('/court-type') || 
+                            req.path.startsWith('/court-status') || 
+                            req.path.startsWith('/reservations')));
 
     if (!token && !isPublicRoute) {
       throw new UnauthorizedException('Token not provided');

@@ -58,10 +58,10 @@ export class CourtService {
 
   async findAll(type: number) {
     if (type) {
-      return this.courtRepository.find({ where: { type: { id: type } }, relations: ['type', 'status'] });
+      return this.courtRepository.find({ where: { type: { id: type } }, relations: ['type', 'status', 'reservations'] });
     }else{
       return this.courtRepository.find({
-        relations: ['type', 'status'],
+        relations: ['type', 'status', 'reservations'],
       });
     }
   }
