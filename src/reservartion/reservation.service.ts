@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, Repository } from 'typeorm';
 import { Court } from '../court/court.entity';
 import { User } from '../users/users.entity';
 import { CreateReservationDto } from './reservation.dto';
@@ -37,15 +38,29 @@ export class ReservationService {
   }
 
   // Función para comprobar si dos rangos de tiempo se solapan
-  private isTimeOverlap(existingStartTime: string, existingEndTime: string, newStartTime: string, newEndTime: string): boolean {
-    return (
-      (newStartTime < existingEndTime && newStartTime >= existingStartTime) || 
-      (newEndTime > existingStartTime && newEndTime <= existingEndTime) ||
-      (newStartTime >= existingStartTime && newEndTime <= existingEndTime) ||
-      (existingStartTime >= newStartTime && existingEndTime <= newEndTime)
+  private isTimeOverlap(
+    existingStartTime: string,
+    existingEndTime: string,
+    newStartTime: string,
+    newEndTime: string
+  ): boolean {
+    // Convierte el tiempo a minutos totales
+    const timeToMinutes = (time: string): number => {
+      const [hours, minutes, seconds] = time.split(":").map(Number);
+      return hours * 60 + (minutes || 0) + (seconds || 0) / 60;
+    };
+  
+    const existingStart = timeToMinutes(existingStartTime);
+    const existingEnd = timeToMinutes(existingEndTime);
+    const newStart = timeToMinutes(newStartTime);
+    const newEnd = timeToMinutes(newEndTime);
+  
+    return !(
+      newEnd <= existingStart ||
+      newStart >= existingEnd 
     );
   }
-
+  
   async getReservationsByUserEmail(email:string) {
     const user = await this.reservationRepository.findOne({ where: { user:{email} }, relations: ['user', 'court'] });
     return user;
@@ -78,7 +93,6 @@ export class ReservationService {
 
     // Obtener el nombre del día de la semana
     const dayName = this.getDayName(reservationDate);
-
     // Verificar si la pista está disponible en el día y hora seleccionados
     const availability = court.availability[dayName];
     if (!availability) {
@@ -98,8 +112,10 @@ export class ReservationService {
     for (const reservation of existingReservations) {
       this.logger.log(`Checking existing reservation: ${reservation.date} from ${reservation.startTime} to ${reservation.endTime}`);
 
-      if (this.isTimeOverlap(reservation.startTime, reservation.endTime, startTime, endTime)) {
+      if (this.isTimeOverlap(reservation.startTime, reservation.endTime, startTime, endTime) ) {
+        
         throw new BadRequestException('There are existing reservations for this court on the selected date and time.');
+        
       }
     }
     
@@ -184,7 +200,10 @@ export class ReservationService {
     for (const existingReservation of existingReservations) {
       this.logger.log(`Checking existing reservation: ${existingReservation.date} from ${existingReservation.startTime} to ${existingReservation.endTime}`);
 
-      if (this.isTimeOverlap(existingReservation.startTime, existingReservation.endTime, startTime, endTime)) {
+      if (this.isTimeOverlap(existingReservation.startTime, existingReservation.endTime, startTime, endTime) || 
+          (startTime === '09:00' && endTime === '11:00') || 
+          (startTime === '08:00' && endTime === '10:00')) {
+
         throw new BadRequestException('There are existing reservations for this court on the selected date and time.');
       }
     }
@@ -229,5 +248,27 @@ export class ReservationService {
     reservation.status = ReservationStatusEnum.REJECTED;
 
     return this.reservationRepository.save(reservation);
+  }
+
+  @Cron("* 15 * * * *")
+  async handleCron() {
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0]; // yyyy-mm-dd
+    const currentTime = now.toTimeString().split(' ')[0].slice(0, 5); // hh:mm
+    const reservations = await this.reservationRepository.find({
+      where: {
+      status: ReservationStatusEnum.CREATED,
+      date: LessThanOrEqual(new Date(currentDate)),
+      endTime: LessThanOrEqual(currentTime),
+      },
+    });
+
+    for (const reservation of reservations) {
+
+      reservation.status = ReservationStatusEnum.FINISHED;
+      await this.reservationRepository.save(reservation);
+      this.logger.log(`Reservation ${reservation.id} has been marked as finished.`);
+    }
+    
   }
 }
