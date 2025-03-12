@@ -93,7 +93,7 @@ export class CourtService {
   async findOne(id: number) {
     const court = await this.courtRepository.findOne({
       where: { id },
-      relations: ['type', 'status'],
+      relations: ['type', 'status', 'reservations'],
     });
     if (!court) {
       throw new NotFoundException('Court not found');

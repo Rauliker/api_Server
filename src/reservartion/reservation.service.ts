@@ -41,7 +41,8 @@ export class ReservationService {
     return (
       (newStartTime < existingEndTime && newStartTime >= existingStartTime) || 
       (newEndTime > existingStartTime && newEndTime <= existingEndTime) ||
-      (newStartTime <= existingStartTime && newEndTime >= existingEndTime)
+      (newStartTime >= existingStartTime && newEndTime <= existingEndTime) ||
+      (existingStartTime >= newStartTime && existingEndTime <= newEndTime)
     );
   }
 
