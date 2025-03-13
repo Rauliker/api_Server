@@ -67,7 +67,7 @@ export class ReservationService {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
 
-    const user = await this.reservationRepository.findOne({ where: { user:{email},status:ReservationStatusEnum.CREATED }, relations: ['user', 'court'] });
+    const user = await this.reservationRepository.find({ where: { user:{id:userId, email},status:ReservationStatusEnum.CREATED }, relations: ['user', 'court'] });
     if(user){
       return user;
     }else{
@@ -84,8 +84,6 @@ export class ReservationService {
     }else{
       throw new NotFoundException('Reservation not found');
     }
-    
-    
   }
 
   async getReservationsById(reservationId: number, token: string) {

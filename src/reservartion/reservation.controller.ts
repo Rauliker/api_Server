@@ -14,7 +14,7 @@ export class ReservationController {
     return this.reservationService.getReservationsById(id, token);
   }
 
-  @Get('/actives')
+  @Get('/actives/:email')
   async getReservations(@Param('email') email: string, @Request() req) {
     const token = req.headers.authorization.split(' ')[1];
 
