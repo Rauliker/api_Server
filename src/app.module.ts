@@ -16,8 +16,6 @@ import { CourtType } from './courtType/courtType.entity';
 import { CourtTypeModule } from './courtType/courtType.module';
 import { Reservation } from './reservartion/reservation.entity';
 import { ReservationModule } from './reservartion/reservation.module';
-import { ReservationStatus } from './reservationStatus/reservationStatus.entity';
-import { ReservationStatusModule } from './reservationStatus/reservationStatus.module';
 import { User } from './users/users.entity';
 import { UserModule } from './users/users.module';
 import { UtilsModule } from './utils/utils.module';
@@ -62,7 +60,6 @@ import { UtilsModule } from './utils/utils.module';
     CourtTypeModule,
     CourtStatusModule,
     ReservationModule,
-    ReservationStatusModule,
     UserModule,
     UtilsModule,
 
@@ -84,7 +81,6 @@ import { UtilsModule } from './utils/utils.module';
         password: process.env.MYSQL_PASSWORD || '',
         database: process.env.MYSQL_DATABASE || 'api',
         entities: [
-          ReservationStatus,
           Reservation,
           CourtStatus,
           CourtType,

@@ -8,12 +8,25 @@ import { ReservationService } from './reservation.service';
 export class ReservationController {
   constructor(private readonly reservationService: ReservationService, private readonly jwtService: JwtService) {}
 
-
-  @Get('/:email')
-  async getReservations(@Param('email') email: string) {
-    return this.reservationService.getReservationsByUserEmail(email);
+  @Get('/:id')
+  async getReservationId(@Param('id') id: number, @Request() req) {
+    const token = req.headers.authorization.split(' ')[1];
+    return this.reservationService.getReservationsById(id, token);
   }
 
+  @Get('/actives')
+  async getReservations(@Param('email') email: string, @Request() req) {
+    const token = req.headers.authorization.split(' ')[1];
+
+    return this.reservationService.getReservationsByUserEmail(email,token);
+  }
+  @Get('/historial/:email')
+  async getReservationsHistorial(@Param('email') email: string, @Request() req) {
+    
+    const token = req.headers.authorization.split(' ')[1];
+
+    return this.reservationService.getReservationsByUserEmailHistorial(email,token);
+  }
   @Post()
   async createReservation(@Request() req,@Body() createReservationDto: CreateReservationDto) {
     let decodedToken;
@@ -25,7 +38,7 @@ export class ReservationController {
     }
 
 
-    if (!decodedToken || !decodedToken.sub) {
+    if (!decodedToken || !decodedToken.sub) { 
       throw new BadRequestException('User ID not found in token');
     }
     const userId = decodedToken.sub;
@@ -37,11 +50,12 @@ export class ReservationController {
   }
 
   @Put(':id')
-  async updateReservation(@Param('id') id: string, @Body() updateReservationDto: UpdateReservationDto) {
-    return this.reservationService.updateReservation(Number(id), updateReservationDto);
+  async updateReservation(@Param('id') id: number, @Body() updateReservationDto: UpdateReservationDto) {
+    return this.reservationService.updateReservation(id, updateReservationDto);
   }
   @Delete(':id')
-  async cancelReservation(@Param('id') id: string) {
-    return this.reservationService.cancelReservation(Number(id));
+  async cancelReservation(@Param('id') id: number, @Request() req) {
+    const token = req.headers.authorization.split(' ')[1];
+    return this.reservationService.cancelReservation(id,token);
   }
 }

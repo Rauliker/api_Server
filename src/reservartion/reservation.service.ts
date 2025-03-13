@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, Repository } from 'typeorm';
+import { LessThanOrEqual, Not, Repository } from 'typeorm';
 import { Court } from '../court/court.entity';
 import { User } from '../users/users.entity';
 import { CreateReservationDto } from './reservation.dto';
@@ -16,6 +17,7 @@ export class ReservationService {
     private userRepository: Repository<User>,
     @InjectRepository(Court)
     private courtRepository: Repository<Court>,
+    private readonly jwtService: JwtService,
   ) {}
 
   private readonly logger = new Logger(ReservationService.name);
@@ -61,10 +63,38 @@ export class ReservationService {
     );
   }
   
-  async getReservationsByUserEmail(email:string) {
-    const user = await this.reservationRepository.findOne({ where: { user:{email} }, relations: ['user', 'court'] });
+  async getReservationsByUserEmail(email: string, token: string) {
+    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    const userId = decodedToken.sub;
+
+    const user = await this.reservationRepository.findOne({ where: { user:{email},status:ReservationStatusEnum.CREATED }, relations: ['user', 'court'] });
+    if (user.user.id !== userId) {
+      throw new UnauthorizedException('You are not authorized to cancel this reservation');
+      }
     return user;
   }
+  async getReservationsByUserEmailHistorial(email: string, token: string) {
+    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    const userId = decodedToken.sub;
+
+    const user = await this.reservationRepository.findOne({ where: { user:{email},status:Not(ReservationStatusEnum.CREATED) }, relations: ['user', 'court'] });
+    if (user.user.id !== userId) {
+      throw new UnauthorizedException('You are not authorized to cancel this reservation');
+    }
+    return user;
+  }
+
+  async getReservationsById(id: number, token: string) {
+    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    const userId = decodedToken.sub;
+    const user = await this.reservationRepository.findOne({ where: { id:id}, relations: ['user', 'court'] });
+    if (user.user.id !== userId) {
+      return user;
+    } else{
+      new UnauthorizedException("No eres el creador de la reserva");
+    }
+  }
+
 
   async createReservation(createReservationDto: CreateReservationDto) {
     const { userId, courtId, date, startTime, endTime, status } = createReservationDto;
@@ -107,6 +137,7 @@ export class ReservationService {
       .createQueryBuilder('reservation')
       .where('reservation.courtId = :courtId', { courtId })
       .andWhere('reservation.date = :date', { date: date })
+      .andWhere('reservation.status="created"')
       .getMany();
 
     for (const reservation of existingReservations) {
@@ -141,7 +172,6 @@ export class ReservationService {
       date: reservationDate,
       startTime,
       endTime,
-      status: reservationStatus,
     });
 
     return this.reservationRepository.save(reservation);
@@ -195,6 +225,7 @@ export class ReservationService {
       .where('reservation.courtId = :courtId', { courtId })
       .andWhere('reservation.date = :date', { date: date })
       .andWhere('reservation.id != :reservationId', { reservationId })
+      .andWhere('reservation.status="created"')
       .getMany();
 
     for (const existingReservation of existingReservations) {
@@ -208,31 +239,18 @@ export class ReservationService {
       }
     }
 
-    let reservationStatus: ReservationStatusEnum;
-    switch (status) {
-      case 'created':
-        reservationStatus = ReservationStatusEnum.CREATED;
-        break;
-      case 'finished':
-        reservationStatus = ReservationStatusEnum.FINISHED;
-        break;
-      case 'rejected':
-        reservationStatus = ReservationStatusEnum.REJECTED;
-        break;
-      default:
-        throw new BadRequestException('Invalid reservation status');
-    }
 
     reservation.user = user;
     reservation.court = court;
     reservation.date = reservationDate;
     reservation.startTime = startTime;
     reservation.endTime = endTime;
-    reservation.status = reservationStatus;
 
     return this.reservationRepository.save(reservation);
   }
-  async cancelReservation(reservationId: number) {
+  async cancelReservation(reservationId: number, token: string) {
+    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    const userId = decodedToken.sub;
     const reservation = await this.reservationRepository.findOne({
       where: { id: reservationId },
     });
@@ -240,6 +258,9 @@ export class ReservationService {
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }
+    if (reservation.user.id !== userId) {
+      throw new UnauthorizedException('You are not authorized to cancel this reservation');
+      }
 
     if ([ReservationStatusEnum.FINISHED, ReservationStatusEnum.REJECTED].includes(reservation.status)) {
       throw new BadRequestException('Cannot cancel a finished or rejected reservation');
@@ -249,12 +270,11 @@ export class ReservationService {
 
     return this.reservationRepository.save(reservation);
   }
-
   @Cron("* 15 * * * *")
   async handleCron() {
     const now = new Date();
-    const currentDate = now.toISOString().split('T')[0]; // yyyy-mm-dd
-    const currentTime = now.toTimeString().split(' ')[0].slice(0, 5); // hh:mm
+    const currentDate = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().split(' ')[0].slice(0, 5); 
     const reservations = await this.reservationRepository.find({
       where: {
       status: ReservationStatusEnum.CREATED,
