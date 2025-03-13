@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -68,31 +68,38 @@ export class ReservationService {
     const userId = decodedToken.sub;
 
     const user = await this.reservationRepository.findOne({ where: { user:{email},status:ReservationStatusEnum.CREATED }, relations: ['user', 'court'] });
-    if (user.user.id !== userId) {
-      throw new UnauthorizedException('You are not authorized to cancel this reservation');
-      }
-    return user;
+    if(user){
+      return user;
+    }else{
+      throw new NotFoundException('Reservation not found');
+    }
   }
   async getReservationsByUserEmailHistorial(email: string, token: string) {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
 
-    const user = await this.reservationRepository.findOne({ where: { user:{email},status:Not(ReservationStatusEnum.CREATED) }, relations: ['user', 'court'] });
-    if (user.user.id !== userId) {
-      throw new UnauthorizedException('You are not authorized to cancel this reservation');
+    const user = await this.reservationRepository.find({ where: { user:{id:userId, email},status:Not(ReservationStatusEnum.CREATED) }, relations: ['user', 'court'] });
+    if(user){
+      return user;
+    }else{
+      throw new NotFoundException('Reservation not found');
     }
-    return user;
+    
+    
   }
 
-  async getReservationsById(id: number, token: string) {
+  async getReservationsById(reservationId: number, token: string) {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
-    const user = await this.reservationRepository.findOne({ where: { id:id}, relations: ['user', 'court'] });
-    if (user.user.id !== userId) {
-      return user;
-    } else{
-      new UnauthorizedException("No eres el creador de la reserva");
+    const user = await this.reservationRepository.findOne({ where: { id:reservationId}, relations: ['user', 'court'] });
+    if(user){
+      if (user.user.id === userId) {
+        return user;
+      }
+    }else{
+      throw new NotFoundException('Reservation not found');
     }
+    
   }
 
 
@@ -148,22 +155,6 @@ export class ReservationService {
         throw new BadRequestException('There are existing reservations for this court on the selected date and time.');
         
       }
-    }
-    
-    // Asignar el estado proporcionado desde el DTO
-    let reservationStatus: ReservationStatusEnum;
-    switch (status) {
-      case 'created':
-        reservationStatus = ReservationStatusEnum.CREATED;
-        break;
-      case 'finished':
-        reservationStatus = ReservationStatusEnum.FINISHED;
-        break;
-      case 'rejected':
-        reservationStatus = ReservationStatusEnum.REJECTED;
-        break;
-      default:
-        throw new BadRequestException('Invalid reservation status');
     }
 
     const reservation = this.reservationRepository.create({
@@ -252,23 +243,22 @@ export class ReservationService {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
     const reservation = await this.reservationRepository.findOne({
-      where: { id: reservationId },
+      where: { id: reservationId, user:{id:userId} },
     });
 
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }
-    if (reservation.user.id !== userId) {
-      throw new UnauthorizedException('You are not authorized to cancel this reservation');
+      if ([ReservationStatusEnum.FINISHED, ReservationStatusEnum.REJECTED].includes(reservation.status)) {
+        throw new BadRequestException('Cannot cancel a finished or rejected reservation');
       }
+  
+      reservation.status = ReservationStatusEnum.REJECTED;
+  
+      return this.reservationRepository.save(reservation);
+    
 
-    if ([ReservationStatusEnum.FINISHED, ReservationStatusEnum.REJECTED].includes(reservation.status)) {
-      throw new BadRequestException('Cannot cancel a finished or rejected reservation');
-    }
-
-    reservation.status = ReservationStatusEnum.REJECTED;
-
-    return this.reservationRepository.save(reservation);
+    
   }
   @Cron("* 15 * * * *")
   async handleCron() {
