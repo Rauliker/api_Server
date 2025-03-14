@@ -66,7 +66,7 @@ export class ReservationService {
   async getReservationsByUserEmail(email: string, token: string) {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
-
+    
     const user = await this.reservationRepository.find({ where: { user:{id:userId, email},status:ReservationStatusEnum.CREATED }, relations: ['user', 'court'] });
     if(user){
       return user;
