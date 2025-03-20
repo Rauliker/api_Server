@@ -220,9 +220,7 @@ export class ReservationService {
     for (const existingReservation of existingReservations) {
       this.logger.log(`Checking existing reservation: ${existingReservation.date} from ${existingReservation.startTime} to ${existingReservation.endTime}`);
 
-      if (this.isTimeOverlap(existingReservation.startTime, existingReservation.endTime, startTime, endTime) || 
-          (startTime === '09:00' && endTime === '11:00') || 
-          (startTime === '08:00' && endTime === '10:00')) {
+      if (this.isTimeOverlap(existingReservation.startTime, existingReservation.endTime, startTime, endTime)) {
 
         throw new BadRequestException('There are existing reservations for this court on the selected date and time.');
       }

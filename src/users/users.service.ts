@@ -62,10 +62,10 @@ export class UserService {
     if (createUserDto.phone.length !== 9) {
       throw new UnauthorizedException('El número de teléfono debe tener 9 dígitos');
     }
-    
-    if(createUserDto.address === undefined || createUserDto.address === '' || createUserDto.address === null){
-      throw new UnauthorizedException('La dirección es requerida');
+    if (!createUserDto.address) {
+      throw new UnauthorizedException('Has de poner tu direccion');
     }
+    
     
     const user = this.userRepository.create(createUserDto);
     return this.userRepository.save(user);
@@ -83,11 +83,11 @@ export class UserService {
       throw new UnauthorizedException('La contraseña debe tener entre 6 y 20 caracteres');
     }
     const userFindEmail = await this.userRepository.findOne({ where: { email:updateUserDto.email } });
-    if(userFindEmail){
+    if(userFindEmail&&updateUserDto.email&&updateUserDto.email==userFindEmail.email){
       throw new UnauthorizedException('El email ya existe');
     }
     const userFindName = await this.userRepository.findOne({ where: { email:updateUserDto.username } });
-    if(userFindName){
+    if(userFindName&&updateUserDto.username&&updateUserDto.username==userFindName.name){
       throw new UnauthorizedException('El nombre de usuario ya existe');
     }
     await this.userRepository.update(userId, updateUserDto);

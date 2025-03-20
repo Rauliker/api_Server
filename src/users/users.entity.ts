@@ -15,6 +15,9 @@ export class User {
   @Column()
   phone: string;
 
+  @Column()
+  adrress: string;
+
   @Column({ unique: true })
   email: string;
 
