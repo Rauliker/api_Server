@@ -109,21 +109,21 @@ export class ReservationService {
 
     const reservationDate = new Date(date);
     if (isNaN(reservationDate.getTime())) {
-      throw new BadRequestException('Invalid date format');
+      throw new BadRequestException('Formato de fecha no válido');
     }
 
     if (reservationDate < today) {
-      throw new BadRequestException('Cannot create reservation for past date');
+      throw new BadRequestException('No se puede actualizar la reserva a una fecha pasada');
     }
 
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Usuario no encontrado');
     }
 
     const court = await this.courtRepository.findOneBy({ id: courtId });
     if (!court) {
-      throw new NotFoundException('Court not found');
+      throw new NotFoundException('Pista no enciontrada');
     }
 
     // Obtener el nombre del día de la semana
@@ -131,7 +131,7 @@ export class ReservationService {
     // Verificar si la pista está disponible en el día y hora seleccionados
     const availability = court.availability[dayName];
     if (!availability) {
-      throw new BadRequestException(`Court is not available on ${dayName}`);
+      throw new BadRequestException(`La pista no está disponible el ${dayName}`);
     }
 
     if (!this.isTimeAvailable(availability, startTime, endTime)) {
@@ -146,11 +146,10 @@ export class ReservationService {
       .getMany();
 
     for (const reservation of existingReservations) {
-      this.logger.log(`Checking existing reservation: ${reservation.date} from ${reservation.startTime} to ${reservation.endTime}`);
 
       if (this.isTimeOverlap(reservation.startTime, reservation.endTime, startTime, endTime) ) {
         
-        throw new BadRequestException('There are existing reservations for this court on the selected date and time.');
+        throw new BadRequestException('Ya existe una reserva un esa franja');
         
       }
     }
@@ -173,7 +172,7 @@ export class ReservationService {
     });
 
     if (!reservation) {
-      throw new NotFoundException('Reservation not found');
+      throw new NotFoundException('Reserva no encontrada');
     }
 
     const today = new Date();
@@ -181,32 +180,32 @@ export class ReservationService {
 
     const reservationDate = new Date(date);
     if (isNaN(reservationDate.getTime())) {
-      throw new BadRequestException('Invalid date format');
+      throw new BadRequestException('Formato de fecha no válido');
     }
 
     if (reservationDate < today) {
-      throw new BadRequestException('Cannot update reservation to a past date');
+      throw new BadRequestException('No se puede actualizar la reserva a una fecha pasada');
     }
 
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Usuario no encontrado');
     }
 
     const court = await this.courtRepository.findOneBy({ id: courtId });
     if (!court) {
-      throw new NotFoundException('Court not found');
+      throw new NotFoundException('Pista no enciontrada');
     }
 
     const dayName = this.getDayName(reservationDate);
 
     const availability = court.availability[dayName];
     if (!availability) {
-      throw new BadRequestException(`Court is not available on ${dayName}`);
+      throw new BadRequestException(`La pista no está disponible el ${dayName}`);
     }
 
     if (!this.isTimeAvailable(availability, startTime, endTime)) {
-      throw new BadRequestException(`Court is not available at the selected time on ${dayName}`);
+      throw new BadRequestException(`La pista no está disponible a la hora seleccionada en ${dayName}`);
     }
 
     const existingReservations = await this.reservationRepository
@@ -218,11 +217,10 @@ export class ReservationService {
       .getMany();
 
     for (const existingReservation of existingReservations) {
-      this.logger.log(`Checking existing reservation: ${existingReservation.date} from ${existingReservation.startTime} to ${existingReservation.endTime}`);
 
       if (this.isTimeOverlap(existingReservation.startTime, existingReservation.endTime, startTime, endTime)) {
 
-        throw new BadRequestException('There are existing reservations for this court on the selected date and time.');
+        throw new BadRequestException('Ya existe una reserva un esa franja');
       }
     }
 
@@ -243,10 +241,10 @@ export class ReservationService {
     });
 
     if (!reservation) {
-      throw new NotFoundException('Reservation not found');
+      throw new NotFoundException('Redervs no encontrada');
     }
       if ([ReservationStatusEnum.FINISHED, ReservationStatusEnum.REJECTED].includes(reservation.status)) {
-        throw new BadRequestException('Cannot cancel a finished or rejected reservation');
+        throw new BadRequestException('No se puede cancelar una reserva finalizada o rechazada');
       }
   
       reservation.status = ReservationStatusEnum.REJECTED;
@@ -273,7 +271,6 @@ export class ReservationService {
 
       reservation.status = ReservationStatusEnum.FINISHED;
       await this.reservationRepository.save(reservation);
-      this.logger.log(`Reservation ${reservation.id} has been marked as finished.`);
     }
     
   }
