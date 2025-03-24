@@ -135,7 +135,7 @@ export class ReservationService {
     }
 
     if (!this.isTimeAvailable(availability, startTime, endTime)) {
-      throw new BadRequestException(`Court is not available at the selected time on ${dayName}`);
+      throw new BadRequestException(`La pista no está disponible a la hora seleccionada en ${dayName}`);
     }
 
     const existingReservations = await this.reservationRepository
@@ -205,7 +205,7 @@ export class ReservationService {
     }
 
     if (!this.isTimeAvailable(availability, startTime, endTime)) {
-      throw new BadRequestException(`La pista no está disponible a la hora seleccionada en ${dayName}`);
+      throw new BadRequestException(`La pista no está disponible a la hora seleccionada el ${dayName}`);
     }
 
     const existingReservations = await this.reservationRepository
