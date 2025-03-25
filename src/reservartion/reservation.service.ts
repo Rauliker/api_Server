@@ -28,6 +28,20 @@ export class ReservationService {
     return days[date.getDay()];
   }
 
+  // Función para traducir el nombre del día de la semana
+  private translateDayName(dayName: string): string {
+    const translations: { [key: string]: string } = {
+      sunday: 'domingo',
+      monday: 'lunes',
+      tuesday: 'martes',
+      wednesday: 'miércoles',
+      thursday: 'jueves',
+      friday: 'viernes',
+      saturday: 'sábado',
+    };
+    return translations[dayName] || dayName;
+  }
+
   // Función para comprobar si la hora solicitada está dentro del horario de disponibilidad
   private isTimeAvailable(availability: string[], startTime: string, endTime: string): boolean {
     for (const range of availability) {
@@ -131,11 +145,11 @@ export class ReservationService {
     // Verificar si la pista está disponible en el día y hora seleccionados
     const availability = court.availability[dayName];
     if (!availability) {
-      throw new BadRequestException(`La pista no está disponible el ${dayName}`);
+      throw new BadRequestException(`La pista no está disponible el ${this.translateDayName(dayName)}`);
     }
 
     if (!this.isTimeAvailable(availability, startTime, endTime)) {
-      throw new BadRequestException(`La pista no está disponible a la hora seleccionada en ${dayName}`);
+      throw new BadRequestException(`La pista no está disponible a la hora seleccionada el ${this.translateDayName(dayName)}`);
     }
 
     const existingReservations = await this.reservationRepository
