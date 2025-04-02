@@ -24,7 +24,7 @@ export class CreateReservationDto {
     @IsNotEmpty()
     courtId: number;
     
-    @IsIn(['created', 'confirmed', 'rejected'], { message: 'El estado debe ser "created", "confirmed" o "rejected"' })
+    @IsIn(['created', 'confirmed','finished', 'rejected'], { message: 'El estado debe ser "created", "confirmed" o "rejected"' })
     @IsNotEmpty()
     status: string;
 }
@@ -56,7 +56,7 @@ export class UpdateReservationDto {
     @IsOptional()
     courtId: number;
     
-    @IsIn(['created', 'confirmed', 'rejected'], { message: 'El estado debe ser "created", "confirmed" o "rejected"' })
+    @IsIn(['created', 'confirmed','finished', 'rejected'], { message: 'El estado debe ser "created", "confirmed" o "rejected"' })
     
     @IsOptional()
     status: string;

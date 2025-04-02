@@ -5,6 +5,7 @@ import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, Up
 // Definir un enum para los estados de la reserva
 export enum ReservationStatusEnum {
   CREATED = 'created',
+  CONFIRMED = 'confirmed',
   FINISHED= 'finished',
   REJECTED = 'rejected'
 }
