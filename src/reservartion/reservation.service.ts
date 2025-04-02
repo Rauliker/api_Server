@@ -207,7 +207,7 @@ export class ReservationService {
       .createQueryBuilder('reservation')
       .where('reservation.courtId = :courtId', { courtId })
       .andWhere('reservation.date = :date', { date: date })
-      .andWhere('reservation.status="created"')
+      .andWhere('reservation.status IN (:...statuses)', { statuses: [ReservationStatusEnum.CREATED, ReservationStatusEnum.CONFIRMED] })
       .getMany();
 
     for (const reservation of existingReservations) {
@@ -278,7 +278,7 @@ export class ReservationService {
       .where('reservation.courtId = :courtId', { courtId })
       .andWhere('reservation.date = :date', { date: date })
       .andWhere('reservation.id != :reservationId', { reservationId })
-      .andWhere('reservation.status="created"')
+      .andWhere('reservation.status IN (:...statuses)', { statuses: [ReservationStatusEnum.CREATED, ReservationStatusEnum.CONFIRMED] })
       .getMany();
 
     for (const existingReservation of existingReservations) {
