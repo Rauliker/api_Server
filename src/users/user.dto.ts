@@ -3,7 +3,7 @@ export class CreateUserDto {
   email: string;
   username: string;
   phone: string;
-  adress: string;
+  adrress: string;
   password: string;
 }
 
@@ -12,7 +12,7 @@ export class UpdateUserDto {
   email?: string;
   username?: string;
   phone?: string;
-  adress?: string;
+  adrress?: string;
   password?: string;
 }
 

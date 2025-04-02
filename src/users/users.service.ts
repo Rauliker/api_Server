@@ -62,7 +62,7 @@ export class UserService {
     if (createUserDto.phone.length !== 9) {
       throw new UnauthorizedException('El número de teléfono debe tener 9 dígitos');
     }
-    if (!createUserDto.adress) {
+    if (!createUserDto.adrress) {
       throw new UnauthorizedException('Has de poner tu direccion');
     }
     
