@@ -62,8 +62,6 @@ import { UtilsModule } from './utils/utils.module';
     ReservationModule,
     UserModule,
     UtilsModule,
-
-
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

@@ -27,6 +27,13 @@ export class ReservationController {
 
     return this.reservationService.getReservationsByUserEmailHistorial(email,token);
   }
+  @Post('payment')
+    async createPaymentIntent(@Request() req,@Body() body) {
+      const token = req.headers.authorization.split(' ')[1];
+
+      const {id, amount, currency } = body;
+      return this.reservationService.createPaymentIntent(token, id, amount, currency);
+    }
   @Post()
   async createReservation(@Request() req,@Body() createReservationDto: CreateReservationDto) {
     let decodedToken;
@@ -37,7 +44,7 @@ export class ReservationController {
       throw new BadRequestException('Invalid token');
     }
 
-
+    
     if (!decodedToken || !decodedToken.sub) { 
       throw new BadRequestException('User ID not found in token');
     }

@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { JwtService } from '@nestjs/jwt';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, Not, Repository } from 'typeorm';
+import Stripe from 'stripe';
+import { In, LessThanOrEqual, Not, Repository } from 'typeorm';
 import { Court } from '../court/court.entity';
 import { User } from '../users/users.entity';
 import { CreateReservationDto } from './reservation.dto';
@@ -10,6 +11,8 @@ import { Reservation, ReservationStatusEnum } from './reservation.entity';
 
 @Injectable()
 export class ReservationService {
+  private stripe: Stripe;
+
   constructor(
     @InjectRepository(Reservation)
     private reservationRepository: Repository<Reservation>,
@@ -18,7 +21,7 @@ export class ReservationService {
     @InjectRepository(Court)
     private courtRepository: Repository<Court>,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {this.stripe = new Stripe(process.env.SECRET_KEY_STRIPE, { apiVersion: '2025-03-31.basil' });}
 
   private readonly logger = new Logger(ReservationService.name);
 
@@ -26,6 +29,48 @@ export class ReservationService {
   private getDayName(date: Date): string {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     return days[date.getDay()];
+  }
+
+  async createPaymentIntent(token:string,id:number, amount: number, currency: string) {
+    const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
+    const userId = decodedToken.sub;
+    const user = await this.userRepository.findOne({ where: {id: userId } });
+    if (!id) {
+      throw new BadRequestException('Id de reserva no proporcionado');
+    }
+    const reservation = await this.reservationRepository.findOneBy({ id });
+    if (!reservation) {
+      throw new NotFoundException('Reserva no encontrada');
+    }
+    if (reservation.status !== ReservationStatusEnum.CREATED) {
+      throw new BadRequestException('La reserva no se pude pagar');
+    }
+    if (amount <= 0) {
+      throw new BadRequestException('El monto debe ser mayor que cero');
+    }
+    if (!currency) {
+      throw new BadRequestException('Moneda no proporcionada');
+    }
+    if (currency !== 'usd' && currency !== 'eur') {
+      throw new BadRequestException('Moneda no válida. Solo se permiten "usd" y "eur"');
+    }
+    const paymentIntent = await this.stripe.paymentIntents.create({
+      amount, // En centavos (ej: 1000 = $10.00)
+      currency,
+      payment_method_types: ['card'],
+      metadata: {
+        reservationId: id.toString(),
+        username: user.username,
+      },
+    });
+    if (!paymentIntent) {
+        throw new Error('Error creating payment intent');
+    }
+    this.reservationRepository.update(id, {status: ReservationStatusEnum.CONFIRMED});
+
+
+
+    return { clientSecret: paymentIntent.client_secret };
   }
 
   // Función para traducir el nombre del día de la semana
@@ -81,7 +126,13 @@ export class ReservationService {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
     
-    const user = await this.reservationRepository.find({ where: { user:{id:userId, email},status:ReservationStatusEnum.CREATED }, relations: ['user', 'court'] });
+    const user = await this.reservationRepository.find({ 
+      where: { 
+        user: { id: userId, email }, 
+        status: In([ReservationStatusEnum.CREATED, ReservationStatusEnum.CONFIRMED]) 
+      }, 
+      relations: ['user', 'court'] 
+    });
     if(user){
       return user;
     }else{
@@ -92,7 +143,7 @@ export class ReservationService {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
 
-    const user = await this.reservationRepository.find({ where: { user:{id:userId, email},status:Not(ReservationStatusEnum.CREATED) }, relations: ['user', 'court'] });
+    const user = await this.reservationRepository.find({ where: { user:{id:userId, email},status:Not(In([ReservationStatusEnum.CREATED, ReservationStatusEnum.CONFIRMED])) }, relations: ['user', 'court'] });
     if(user){
       return user;
     }else{
@@ -275,7 +326,7 @@ export class ReservationService {
     const currentTime = now.toTimeString().split(' ')[0].slice(0, 5); 
     const reservations = await this.reservationRepository.find({
       where: {
-      status: ReservationStatusEnum.CREATED,
+      status: In([ReservationStatusEnum.CREATED, ReservationStatusEnum.CONFIRMED]),
       date: LessThanOrEqual(new Date(currentDate)),
       endTime: LessThanOrEqual(currentTime),
       },
