@@ -31,6 +31,12 @@ export class ReservationService {
     return days[date.getDay()];
   }
 
+  async confirmPayment(id: number) {
+    this.reservationRepository.update(id, {status: ReservationStatusEnum.CONFIRMED});
+
+    return { clientSecret: "bien" };
+  }
+
   async createPaymentIntent(token:string,id:number, amount: number, currency: string) {
     const decodedToken = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
     const userId = decodedToken.sub;
@@ -57,6 +63,7 @@ export class ReservationService {
     const paymentIntent = await this.stripe.paymentIntents.create({
       amount, // En centavos (ej: 1000 = $10.00)
       currency,
+      confirmation_method: 'automatic',
       payment_method_types: ['card'],
       metadata: {
         reservationId: id.toString(),
@@ -66,9 +73,6 @@ export class ReservationService {
     if (!paymentIntent) {
         throw new Error('Error creating payment intent');
     }
-    this.reservationRepository.update(id, {status: ReservationStatusEnum.CONFIRMED});
-
-
 
     return { clientSecret: paymentIntent.client_secret };
   }

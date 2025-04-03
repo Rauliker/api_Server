@@ -29,11 +29,18 @@ export class ReservationController {
   }
   @Post('payment')
     async createPaymentIntent(@Request() req,@Body() body) {
-      const token = req.headers.authorization.split(' ')[1];
+    const token = req.headers.authorization.split(' ')[1];
 
-      const {id, amount, currency } = body;
-      return this.reservationService.createPaymentIntent(token, id, amount, currency);
-    }
+    const {id, amount, currency } = body;
+    return this.reservationService.createPaymentIntent(token, id, amount, currency);
+  }
+
+  @Post('confirm')
+  async confirmPayment(@Body() body) {
+
+    const {id } = body;
+    return this.reservationService.confirmPayment(id);
+  }
   @Post()
   async createReservation(@Request() req,@Body() createReservationDto: CreateReservationDto) {
     let decodedToken;
