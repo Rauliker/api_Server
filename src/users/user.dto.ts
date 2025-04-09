@@ -4,6 +4,7 @@ export class CreateUserDto {
   username: string;
   phone: string;
   adrress: string;
+  role: string;
   password: string;
 }
 
@@ -13,6 +14,7 @@ export class UpdateUserDto {
   username?: string;
   phone?: string;
   adrress?: string;
+    ole?: string;
   password?: string;
 }
 
