@@ -65,6 +65,11 @@ export class UserService {
     if (!createUserDto.adrress) {
       throw new UnauthorizedException('Has de poner tu direccion');
     }
+    if (createUserDto.role) {
+      if (createUserDto.role !== 'admin' && createUserDto.role !== 'user') {
+        throw new UnauthorizedException('El rol debe ser admin o user');
+      }
+    }
     
     
     const user = this.userRepository.create(createUserDto);

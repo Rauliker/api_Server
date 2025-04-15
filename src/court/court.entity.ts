@@ -1,8 +1,10 @@
-import { CourtStatus } from "src/courtStatus/courtStatus.entity";
 import { CourtType } from "src/courtType/courtType.entity";
 import { Reservation } from "src/reservartion/reservation.entity";
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-
+export enum CourtStatusEnum {
+  OPEN   = 'open',
+  CLOSED = 'closed',
+}
 @Entity()
 export class Court {
   @PrimaryGeneratedColumn()
@@ -19,9 +21,13 @@ export class Court {
   @ManyToOne(() => CourtType)
   type: CourtType;
 
-  @ManyToOne(() => CourtStatus)
-  status: CourtStatus;
-
+  @Column({
+      type: 'enum',
+      enum: CourtStatusEnum,
+      default: CourtStatusEnum.OPEN,
+    })
+    status: CourtStatusEnum;
+  
   @OneToMany(() => Reservation, (reservation) => reservation.court)
   reservations: Reservation[];
 

@@ -18,7 +18,7 @@ export class User {
   @Column()
   adrress: string;
 
-  @Column()
+  @Column({ default: 'user' })
   role: string;
 
   @Column({ unique: true })

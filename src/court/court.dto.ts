@@ -1,7 +1,11 @@
+import { IsIn, IsNotEmpty, IsOptional } from "class-validator";
+
 export class CreateCourtDto {
   name: string;
   typeId: number;
-  statusId: number;
+  @IsIn(['open', 'closed'], { message: 'El estado debe ser "open", "closed"' })
+  @IsNotEmpty()
+  status: string;
   price: number;
   
   availability: {
@@ -19,7 +23,9 @@ export class CreateCourtDto {
 export class UpdateCourtDto {
   name?: string;
   typeId?: number;
-  statusId?: number;
+  @IsIn(['open', 'closed'], { message: 'El estado debe ser "open", "closed"' })    
+  @IsOptional()
+  status: string;
   price?: number;
 
   availability?: {

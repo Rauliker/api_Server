@@ -25,10 +25,6 @@ export class CourtService {
       throw new NotFoundException('Court type not found');
     }
 
-    const status = await this.statusRepository.findOneBy({ id: createCourtDto.statusId });
-    if (!status) {
-      throw new NotFoundException('Court status not found');
-    }
     if (!createCourtDto.name) {
       throw new UnauthorizedException('Name is required');
     }
@@ -42,11 +38,11 @@ export class CourtService {
     if(createCourtDto.price <= 0){
       throw new UnauthorizedException('Price must be greater than 0');
     }
-
+    
     const court = this.courtRepository.create({
       name: createCourtDto.name,
       type,
-      status,
+      
       price: createCourtDto.price,
       availability:createCourtDto.availability
     });
@@ -58,10 +54,10 @@ export class CourtService {
 
   async findAll(type: number) {
     if (type) {
-      return this.courtRepository.find({ where: { type: { id: type } }, relations: ['type', 'status', 'reservations'] });
+      return this.courtRepository.find({ where: { type: { id: type } }, relations: ['type', 'reservations'] });
     }else{
       return this.courtRepository.find({
-        relations: ['type', 'status', 'reservations'],
+        relations: ['type', 'reservations'],
       });
     }
   }
@@ -93,7 +89,7 @@ export class CourtService {
   async findOne(id: number) {
     const court = await this.courtRepository.findOne({
       where: { id },
-      relations: ['type', 'status', 'reservations'],
+      relations: ['type', 'reservations'],
     });
     if (!court) {
       throw new NotFoundException('Court not found');
@@ -112,13 +108,7 @@ export class CourtService {
       court.type = type;
     }
 
-    if (updateCourtDto.statusId) {
-      const status = await this.statusRepository.findOneBy({ id: updateCourtDto.statusId });
-      if (!status) {
-        throw new NotFoundException('Court status not found');
-      }
-      court.status = status;
-    }
+    
     if(updateCourtDto.price <= 0){
       throw new UnauthorizedException('Price must be greater than 0');
     }
