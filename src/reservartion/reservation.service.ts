@@ -323,7 +323,7 @@ export class ReservationService {
 
     
   }
-  @Cron("*/ 1 * * * *")
+  @Cron("* 1 * * * *")
   async handleCron() {
     const now = new Date();
     const currentDate = now.toISOString().split('T')[0];
@@ -343,7 +343,7 @@ export class ReservationService {
     }
     
   }
-  @Cron("*/ 10 * * * *")
+  @Cron("* 10 * * * *")
   async handleFiveMinuteCron() {
 
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
