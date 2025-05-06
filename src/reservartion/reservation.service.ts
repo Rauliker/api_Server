@@ -323,7 +323,7 @@ export class ReservationService {
 
     
   }
-  @Cron("* 15 * * * *")
+  @Cron("*/ 1 * * * *")
   async handleCron() {
     const now = new Date();
     const currentDate = now.toISOString().split('T')[0];
@@ -342,5 +342,23 @@ export class ReservationService {
       await this.reservationRepository.save(reservation);
     }
     
+  }
+  @Cron("*/ 10 * * * *")
+  async handleFiveMinuteCron() {
+
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+    const unpaidReservations = await this.reservationRepository.find({
+      where: {
+        status: ReservationStatusEnum.CREATED,
+        createdAt: LessThanOrEqual(tenMinutesAgo),
+      },
+    });
+
+    for (const reservation of unpaidReservations) {
+      reservation.status = ReservationStatusEnum.REJECTED;
+      await this.reservationRepository.save(reservation);
+      this.logger.log(`Reservation with ID ${reservation.id} has been automatically canceled due to non-payment`);
+    }
   }
 }
