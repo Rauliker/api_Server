@@ -64,27 +64,52 @@ export class CourtService {
 
   async addImage(id: number, file: Express.Multer.File) {
     console.log('Archivo recibido:', file); 
+
     if (!file) {
         throw new BadRequestException('No file uploaded');
     }
+
     const court = await this.findOne(id);
-    court.imageUrl ="images/"+ court.name + court.type.name;
+    if (!court) {
+        throw new NotFoundException('Court not found');
+    }
+
     const validImageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
     const fileExtension = file.originalname.split('.').pop();
 
     if (!validImageExtensions.includes(fileExtension)) {
-      throw new NotFoundException('Invalid file type');
-    }
-    const imagesDir = path.join(__dirname, '..', '..', 'images');
-    if (!fs.existsSync(imagesDir)) {
-      fs.mkdirSync(imagesDir);
+        throw new NotFoundException('Invalid file type');
     }
 
-    const filePath = path.join(imagesDir, `${court.name}_${court.type.name}.${fileExtension}`);
-    fs.writeFileSync(filePath, file.buffer);
-    court.imageUrl += `.${fileExtension}`;
-    return this.courtRepository.save(court);
-  }
+    const imagesDir = path.join(__dirname, '..', '..', 'images');
+    
+    // Crear directorio si no existe
+    if (!fs.existsSync(imagesDir)) {
+        fs.mkdirSync(imagesDir, { recursive: true });
+    }
+
+    // Generar nombre único para el archivo para evitar colisiones
+    const fileName = `${court.name}_${court.type.name}.${fileExtension}`;
+    const filePath = path.join(imagesDir, fileName);
+
+    try {
+        // Usar fs.promises.writeFile para una operación asincrónica
+        await fs.promises.writeFile(filePath, file.buffer);
+
+        // Actualizar la URL de la imagen en el objeto court
+        court.imageUrl = `images/${fileName}`;
+
+        // Generar la URL completa
+        const imageUrl = `http://localhost:3000/${court.imageUrl}`;
+        console.log('Image URL:', imageUrl);
+
+        // Guardar cambios en la base de datos
+        return this.courtRepository.save(court);
+    } catch (error) {
+        console.error('Error al guardar la imagen:', error);
+        throw new BadRequestException('Error al guardar la imagen');
+    }
+}
 
   async findOne(id: number) {
     const court = await this.courtRepository.findOne({

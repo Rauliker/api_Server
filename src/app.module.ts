@@ -37,8 +37,11 @@ import { UtilsModule } from './utils/utils.module';
       },
     }),
     ServeStaticModule.forRoot({
-      rootPath: path.join(__dirname, '..', 'images'),  // Ruta donde se almacenan los archivos subidos
-      serveRoot: '/images',  // Prefijo para acceder a los archivos estáticos
+      rootPath: path.join(__dirname, '..', 'images'),
+      serveRoot: '/images',
+      serveStaticOptions: {
+        index: false,
+      },
     }),
     JwtModule.registerAsync({
         imports: [ConfigModule],
